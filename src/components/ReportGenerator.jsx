@@ -1,7 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
+import { Download, Loader2, Printer, RotateCcw } from 'lucide-react'
 import { selectTransactions } from '../store/transactionSlice.js'
 import { CATEGORIES, filterTransactions, formatDate, formatRupiah, groupByCategory, summarize, toISODate, todayISO } from '../utils/finance.js'
+import Logo from './Logo.jsx'
 import { Button, Card, Field, Input, PageHeader, Select } from './ui.jsx'
 
 const ALL_CATEGORIES = [...new Set([...CATEGORIES.income, ...CATEGORIES.expense])]
@@ -81,7 +83,8 @@ const ReportGenerator = () => {
         windowWidth: 1024,
       })
 
-      const imgData = canvas.toDataURL('image/png')
+      // JPEG keeps a multi-page report around 1–2 MB; PNG at this resolution is 10× larger.
+      const imgData = canvas.toDataURL('image/jpeg', 0.9)
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pdfWidth = pdf.internal.pageSize.getWidth()
       const pdfHeight = pdf.internal.pageSize.getHeight()
@@ -89,12 +92,12 @@ const ReportGenerator = () => {
       let heightLeft = imgHeight
       let position = 0
 
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight)
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight)
       heightLeft -= pdfHeight
       while (heightLeft > 0) {
         position -= pdfHeight
         pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight)
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight)
         heightLeft -= pdfHeight
       }
 
@@ -128,20 +131,20 @@ const ReportGenerator = () => {
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="📅 Tanggal mulai">
+            <Field label="Tanggal mulai">
               <Input type="date" value={filters.startDate} onChange={set('startDate')} />
             </Field>
-            <Field label="📅 Tanggal selesai">
+            <Field label="Tanggal selesai">
               <Input type="date" value={filters.endDate} onChange={set('endDate')} />
             </Field>
-            <Field label="🔍 Jenis">
+            <Field label="Jenis">
               <Select value={filters.type} onChange={set('type')}>
                 <option value="all">Semua transaksi</option>
                 <option value="income">Hanya pendapatan</option>
                 <option value="expense">Hanya pengeluaran</option>
               </Select>
             </Field>
-            <Field label="🏷️ Kategori">
+            <Field label="Kategori">
               <Select value={filters.category} onChange={set('category')}>
                 <option value="all">Semua kategori</option>
                 {(filters.type === 'all' ? ALL_CATEGORIES : CATEGORIES[filters.type]).map((c) => (
@@ -154,13 +157,14 @@ const ReportGenerator = () => {
           </div>
           <div className="flex flex-wrap gap-3 pt-2 border-t border-outline-variant/30">
             <Button variant="success" onClick={generatePDF} disabled={generating || !filtered.length}>
-              {generating ? '⏳ Membuat PDF…' : '⬇️ Download PDF'}
+              {generating ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+              {generating ? 'Membuat PDF…' : 'Download PDF'}
             </Button>
             <Button variant="secondary" onClick={() => window.print()} disabled={!filtered.length}>
-              🖨️ Cetak
+              <Printer size={18} /> Cetak
             </Button>
             <Button variant="secondary" onClick={() => setFilters(emptyFilters)}>
-              🔄 Reset filter
+              <RotateCcw size={18} /> Reset filter
             </Button>
           </div>
         </Card>
@@ -180,7 +184,9 @@ const ReportGenerator = () => {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-extrabold text-primary">💰 SimpananMu</p>
+              <p className="flex items-center justify-end gap-2 text-2xl font-extrabold text-primary">
+                <Logo size={32} /> SimpananMu
+              </p>
               <p className="text-sm text-on-surface-variant">Dicetak {new Date().toLocaleString('id-ID')}</p>
             </div>
           </div>

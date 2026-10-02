@@ -29,7 +29,7 @@ const GoalForm = ({ goal, onClose }) => {
   }
 
   return (
-    <Modal title={goal ? '✏️ Ubah Target' : '🐷 Target Tabungan Baru'} onClose={onClose}>
+    <Modal title={goal ? 'Ubah Target' : 'Target Tabungan Baru'} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="Nama target">
           <Input value={form.name} onChange={set('name')} placeholder="mis. Dana Darurat" autoFocus />
@@ -71,14 +71,14 @@ const ContributeForm = ({ goal, onClose }) => {
   }
 
   return (
-    <Modal title={`💵 ${goal.name}`} onClose={onClose}>
+    <Modal title={goal.name} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <Segmented
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'deposit', label: '➕ Setor' },
-            { value: 'withdraw', label: '➖ Tarik' },
+            { value: 'deposit', label: 'Setor' },
+            { value: 'withdraw', label: 'Tarik' },
           ]}
         />
         <Field label="Nominal (Rp)">
@@ -137,11 +137,11 @@ const GoalCard = ({ goal, onEdit, onContribute }) => {
       <ProgressBar value={goal.saved} max={goal.target} thick />
       <div className="text-label-sm text-on-surface-variant space-y-0.5">
         {done ? (
-          <p className="text-mint-ink">Target tercapai! 🎉</p>
+          <p className="text-mint-ink">Target tercapai!</p>
         ) : (
           <>
             <p>
-              Sisa <strong className="text-primary tnum">{formatRupiah(remaining)}</strong> lagi ✨
+              Sisa <strong className="text-primary tnum">{formatRupiah(remaining)}</strong> lagi
             </p>
             {months !== null && months > 0 && <p>Nabung ± {formatRupiah(Math.ceil(remaining / months))} / bulan</p>}
           </>
@@ -219,7 +219,7 @@ const SavingsGoals = () => {
         </div>
       ) : (
         <Card>
-          <EmptyState icon="🐷" message="Belum ada target tabungan.">
+          <EmptyState icon={PiggyBank} message="Belum ada target tabungan.">
             <Button onClick={() => setEditing({})}>
               <Plus size={18} /> Buat target pertama
             </Button>

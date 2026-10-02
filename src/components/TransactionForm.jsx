@@ -49,14 +49,14 @@ const TransactionForm = ({ transaction, defaultType = 'expense', onClose }) => {
   }
 
   return (
-    <Modal title={isEdit ? '✏️ Ubah Transaksi' : '➕ Tambah Transaksi'} onClose={onClose}>
+    <Modal title={isEdit ? 'Ubah Transaksi' : 'Tambah Transaksi'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <Segmented
           value={form.type}
           onChange={setType}
           options={[
-            { value: 'expense', label: '💸 Pengeluaran' },
-            { value: 'income', label: '💰 Pemasukan' },
+            { value: 'expense', label: 'Pengeluaran' },
+            { value: 'income', label: 'Pemasukan' },
           ]}
         />
 

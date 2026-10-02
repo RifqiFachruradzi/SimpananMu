@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { X } from 'lucide-react'
+import { Flower2, X } from 'lucide-react'
 
 export const PageHeader = ({ icon, title, subtitle, actions }) => (
   <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -173,9 +173,11 @@ export const Modal = ({ title, onClose, children }) => {
   )
 }
 
-export const EmptyState = ({ icon = '🌸', message, children }) => (
+export const EmptyState = ({ icon: Icon = Flower2, message, children }) => (
   <div className="text-center py-10 text-on-surface-variant">
-    <div className="text-4xl mb-2">{icon}</div>
+    <div className="icon-disc w-14 h-14 mx-auto mb-3 bg-primary-fixed/50 text-primary">
+      <Icon size={26} />
+    </div>
     <p className="text-body-md">{message}</p>
     {children && <div className="mt-4">{children}</div>}
   </div>

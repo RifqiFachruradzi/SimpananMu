@@ -24,23 +24,23 @@ export const PALETTES = [
 
 const META = {
   // income
-  Penjualan: { icon: ShoppingBag, emoji: '🛍️', palette: 1 },
-  Gaji: { icon: Wallet, emoji: '💼', palette: 0 },
-  Investasi: { icon: TrendingUp, emoji: '📈', palette: 3 },
-  Bonus: { icon: Gift, emoji: '🎁', palette: 0 },
+  Penjualan: { icon: ShoppingBag, palette: 1 },
+  Gaji: { icon: Wallet, palette: 0 },
+  Investasi: { icon: TrendingUp, palette: 3 },
+  Bonus: { icon: Gift, palette: 0 },
   // expense
-  'Bahan Baku': { icon: Package, emoji: '📦', palette: 0 },
-  'Gaji Karyawan': { icon: Users, emoji: '🧑‍💼', palette: 3 },
-  Marketing: { icon: Megaphone, emoji: '📣', palette: 1 },
-  Operasional: { icon: Factory, emoji: '🏭', palette: 2 },
-  Makanan: { icon: UtensilsCrossed, emoji: '☕', palette: 0 },
-  Transportasi: { icon: Bus, emoji: '🚌', palette: 2 },
-  Tagihan: { icon: ReceiptText, emoji: '🧾', palette: 3 },
-  Hiburan: { icon: Clapperboard, emoji: '🎟️', palette: 1 },
-  Lainnya: { icon: Sparkles, emoji: '✨', palette: 2 },
+  'Bahan Baku': { icon: Package, palette: 0 },
+  'Gaji Karyawan': { icon: Users, palette: 3 },
+  Marketing: { icon: Megaphone, palette: 1 },
+  Operasional: { icon: Factory, palette: 2 },
+  Makanan: { icon: UtensilsCrossed, palette: 0 },
+  Transportasi: { icon: Bus, palette: 2 },
+  Tagihan: { icon: ReceiptText, palette: 3 },
+  Hiburan: { icon: Clapperboard, palette: 1 },
+  Lainnya: { icon: Sparkles, palette: 2 },
 }
 
 export const categoryMeta = (name = 'Lainnya') => {
   const meta = META[name] || META.Lainnya
-  return { ...PALETTES[meta.palette], Icon: meta.icon, emoji: meta.emoji }
+  return { ...PALETTES[meta.palette], Icon: meta.icon }
 }

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
+import { Compass } from 'lucide-react'
 import { BottomNav, TopBar } from './components/Header'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
@@ -13,7 +14,9 @@ const Loading = () => <div className="py-24 text-center text-on-surface-variant 
 
 const NotFound = () => (
   <div className="py-24 text-center space-y-4">
-    <p className="text-6xl">🧭</p>
+    <div className="icon-disc w-16 h-16 mx-auto bg-primary-fixed/50 text-primary">
+      <Compass size={30} />
+    </div>
     <h1 className="text-headline-lg text-on-surface">Halaman tidak ditemukan</h1>
     <Link to="/" className="inline-block text-label-lg text-primary hover:underline">
       Kembali ke Home

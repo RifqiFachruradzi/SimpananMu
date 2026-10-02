@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Lock, Mail, Sparkles, User } from 'lucide-react'
+import { Lock, Mail, User } from 'lucide-react'
 import { api } from '../utils/api.js'
+import Logo from './Logo.jsx'
 import { Button, Input, Segmented } from './ui.jsx'
 
 const IconInput = ({ icon: Icon, ...props }) => (
@@ -34,11 +35,9 @@ const AuthScreen = ({ onSignedIn, notice }) => {
     <div className="min-h-[100dvh] flex items-center justify-center px-5 py-10">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <div className="icon-disc w-16 h-16 mx-auto bg-gradient-to-tr from-primary-container to-secondary-container text-white shadow-hero">
-            <Sparkles size={30} />
-          </div>
+          <Logo size={72} className="mx-auto drop-shadow-[0_16px_36px_rgba(244,114,182,0.32)]" />
           <h1 className="mt-4 text-headline-lg text-on-surface">SimpananMu</h1>
-          <p className="mt-1 text-body-md text-on-surface-variant">Catat keuangan, atur anggaran, dan wujudkan tabungan impianmu ✨</p>
+          <p className="mt-1 text-body-md text-on-surface-variant">Catat keuangan, atur anggaran, dan wujudkan tabungan impianmu.</p>
         </div>
 
         <form onSubmit={submit} className="glass rounded-card-lg p-6 space-y-4" noValidate>
