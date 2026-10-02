@@ -4,13 +4,16 @@ import { Provider } from 'react-redux'
 import { BrowserRouter } from 'react-router-dom'
 import { store } from './store'
 import App from './App.jsx'
+import AuthGate from './components/AuthGate.jsx'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <AuthGate>
+          <App />
+        </AuthGate>
       </BrowserRouter>
     </Provider>
   </React.StrictMode>,

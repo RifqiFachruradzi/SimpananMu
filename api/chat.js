@@ -1,8 +1,12 @@
 import { ApiError, FinishReason, GoogleGenAI } from '@google/genai'
+import { PREFIX, requireUser } from './_lib/auth.js'
+import { handle, readBody, sendJSON } from './_lib/http.js'
+import { redis } from './_lib/redis.js'
 
 // Serverless endpoint for the AI Buddy chat. Runs as a Vercel Function in
 // production and as Vite dev middleware locally (see vite.config.js).
 // Requires GEMINI_API_KEY in the environment (free key: aistudio.google.com).
+// Signed-in users only, with a daily question limit per account (BUDDY_DAILY_LIMIT, default 30).
 
 // Tried in order. The free tier often answers 503 (overloaded) or 429 (per-model
 // quota), and a model name can be unavailable for a key (404), so fall back to
@@ -12,6 +16,7 @@ const RETRY_NEXT_MODEL = new Set([404, 429, 500, 503])
 const MAX_MESSAGES = 20
 const MAX_CHARS = 4000
 const MAX_CONTEXT_CHARS = 20000
+const DAILY_LIMIT = Number(process.env.BUDDY_DAILY_LIMIT) || 30
 
 const SYSTEM_PROMPT = `Kamu adalah "Buddy", asisten keuangan pribadi di aplikasi SimpananMu. Pengguna mencatat pendapatan, pengeluaran, anggaran per kategori, dan target tabungan di aplikasi ini.
 
@@ -26,14 +31,6 @@ Gaya:
 - Ringkas: gunakan poin-poin dan judul pendek bila membantu, hindari paragraf panjang.
 - Kamu bukan penasihat keuangan berlisensi. Untuk keputusan investasi, pinjaman, pajak, atau hukum yang berisiko besar, beri gambaran umum dan sarankan berkonsultasi dengan profesional.`
 
-const readBody = async (req) => {
-  if (req.body && typeof req.body === 'object') return req.body
-  if (typeof req.body === 'string') return JSON.parse(req.body)
-  const chunks = []
-  for await (const chunk of req) chunks.push(chunk)
-  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
-}
-
 // Short, user-safe description of an upstream error, e.g. "503 UNAVAILABLE: The model is overloaded".
 const describeError = (err) => {
   if (!(err instanceof ApiError)) return err?.name === 'TimeoutError' ? 'timeout' : String(err?.message || err).slice(0, 160)
@@ -43,12 +40,6 @@ const describeError = (err) => {
   } catch {
     return `${err.status}: ${err.message}`.slice(0, 200)
   }
-}
-
-const sendJSON = (res, status, payload) => {
-  res.statusCode = status
-  res.setHeader('Content-Type', 'application/json; charset=utf-8')
-  res.end(JSON.stringify(payload))
 }
 
 // Keeps only well-formed, alternating turns that start with the user, and
@@ -69,7 +60,7 @@ const sanitizeMessages = (messages) => {
   return merged
 }
 
-export default async function handler(req, res) {
+export default handle(async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return sendJSON(res, 405, { error: 'Method not allowed' })
@@ -78,6 +69,9 @@ export default async function handler(req, res) {
   if (!apiKey) {
     return sendJSON(res, 503, { error: 'AI belum dikonfigurasi (GEMINI_API_KEY kosong).', code: 'not_configured' })
   }
+
+  const me = await requireUser(req, res)
+  if (!me) return
 
   let body
   try {
@@ -91,6 +85,14 @@ export default async function handler(req, res) {
     return sendJSON(res, 400, { error: 'Pesan pengguna tidak ditemukan.' })
   }
   const context = JSON.stringify(body.context ?? {}).slice(0, MAX_CONTEXT_CHARS)
+
+  // Daily limit per account (resets at midnight UTC) keeps the shared Gemini quota fair.
+  const usageKey = `${PREFIX}:buddy:${me.email}:${new Date().toISOString().slice(0, 10)}`
+  const used = await redis('INCR', usageKey)
+  if (used === 1) await redis('EXPIRE', usageKey, 60 * 60 * 48)
+  if (used > DAILY_LIMIT) {
+    return sendJSON(res, 429, { error: `Batas harian Buddy (${DAILY_LIMIT} pertanyaan) sudah tercapai. Coba lagi besok ya.`, code: 'daily_limit' })
+  }
 
   // Stop generating if the browser disconnects. (Listen on res: req's 'close'
   // fires as soon as the request body has been read.)
@@ -177,4 +179,4 @@ export default async function handler(req, res) {
     }
     res.end('\n\n_(Koneksi ke AI terputus.)_')
   }
-}
+})

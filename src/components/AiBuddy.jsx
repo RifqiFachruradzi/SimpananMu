@@ -3,10 +3,13 @@ import { useSelector } from 'react-redux'
 import { RotateCcw, SendHorizontal, Sparkles, Square } from 'lucide-react'
 import { selectTransactions } from '../store/transactionSlice.js'
 import { buildFinanceContext, localAdvice } from '../utils/advisor.js'
+import { getToken, localStore, UNAUTHORIZED_EVENT } from '../utils/api.js'
+import { useSession } from '../utils/session.js'
 import Markdown from './Markdown.jsx'
 import { Card, IconButton } from './ui.jsx'
 
-const STORAGE_KEY = 'simpananmu:chat:v1'
+// Chat history is kept per account on this device.
+const historyKey = (email) => `simpananmu:chat:v2:${email}`
 
 const SUGGESTIONS = [
   'Buatkan rencana hemat pengeluaran bulan ini',
@@ -24,9 +27,9 @@ const WELCOME = {
     'Hai! Aku **Buddy** 💖, asisten keuanganmu. Aku bisa membaca data transaksi, anggaran, dan target tabunganmu untuk membantu:\n- menyusun **rencana hemat** pengeluaran\n- mengatur **anggaran** per kategori\n- menghitung **target tabungan** per bulan\n\nMau mulai dari mana?',
 }
 
-const loadHistory = () => {
+const loadHistory = (key) => {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
+    const saved = JSON.parse(localStore.get(key) || 'null')
     return Array.isArray(saved) && saved.length ? saved : [WELCOME]
   } catch {
     return [WELCOME]
@@ -44,7 +47,7 @@ const streamReply = async (history, context, onText, signal) => {
   try {
     res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
       body: JSON.stringify({ messages: history.map(({ role, content }) => ({ role, content })), context }),
       signal,
     })
@@ -56,6 +59,7 @@ const streamReply = async (history, context, onText, signal) => {
   const type = res.headers.get('content-type') || ''
   if (!res.ok || type.includes('text/html')) {
     const data = type.includes('application/json') ? await res.json().catch(() => ({})) : {}
+    if (res.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
     if (res.status === 404 || res.status === 405 || data.code === 'not_configured' || type.includes('text/html')) throw new OfflineError('unavailable')
     const message = data.error || `Gagal (${res.status})`
     throw new Error(data.detail ? `${message}\n\nDetail: \`${data.detail.replace(/`/g, "'")}\`` : message)
@@ -78,7 +82,9 @@ const AiBuddy = () => {
   const planning = useSelector((state) => state.planning)
   const context = useMemo(() => buildFinanceContext(transactions, planning), [transactions, planning])
 
-  const [messages, setMessages] = useState(loadHistory)
+  const { user } = useSession()
+  const storageKey = historyKey(user.email)
+  const [messages, setMessages] = useState(() => loadHistory(storageKey))
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [offline, setOffline] = useState(false)
@@ -88,12 +94,8 @@ const AiBuddy = () => {
 
   useEffect(() => {
     if (busy) return
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50)))
-    } catch {
-      // ignore storage errors
-    }
-  }, [messages, busy])
+    localStore.set(storageKey, JSON.stringify(messages.slice(-50)))
+  }, [messages, busy, storageKey])
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })

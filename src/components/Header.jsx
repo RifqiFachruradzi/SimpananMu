@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Bell, FileText, Flower2, HeartHandshake, PiggyBank, ReceiptText, Target } from 'lucide-react'
+import { Bell, CloudOff, FileText, Flower2, HeartHandshake, Loader2, LogOut, PiggyBank, ReceiptText, Target } from 'lucide-react'
+import { flush } from '../store/sync.js'
+import { useSession } from '../utils/session.js'
 import { setName } from '../store/profileSlice.js'
 import { selectTransactions } from '../store/transactionSlice.js'
 import { formatRupiah, groupByCategory, monthKey, todayISO } from '../utils/finance.js'
@@ -34,28 +36,84 @@ const initials = (name) =>
 
 const ProfileForm = ({ name, onClose }) => {
   const dispatch = useDispatch()
+  const session = useSession()
   const [value, setValue] = useState(name)
+  const [pw, setPw] = useState({ old: '', new: '' })
+  const [pwMsg, setPwMsg] = useState(null) // { ok, text }
+  const [busy, setBusy] = useState(false)
+
+  const changePassword = async (e) => {
+    e.preventDefault()
+    setBusy(true)
+    setPwMsg(null)
+    try {
+      await session.changePassword(pw.old, pw.new)
+      setPw({ old: '', new: '' })
+      setPwMsg({ ok: true, text: 'Kata sandi berhasil diganti ✨' })
+    } catch (err) {
+      setPwMsg({ ok: false, text: err.message })
+    }
+    setBusy(false)
+  }
+
   return (
     <Modal title="Profil Kamu" onClose={onClose}>
-      <form
-        className="space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault()
-          dispatch(setName(value))
-          onClose()
-        }}
-      >
-        <Field label="Nama panggilan">
-          <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="mis. Clara" maxLength={30} autoFocus />
-        </Field>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Batal
+      <div className="space-y-6">
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            dispatch(setName(value))
+            onClose()
+          }}
+        >
+          <p className="text-body-sm text-on-surface-variant">
+            Masuk sebagai <b className="text-on-surface">{session?.user?.email}</b>
+          </p>
+          <Field label="Nama panggilan">
+            <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="mis. Clara" maxLength={30} />
+          </Field>
+          <div className="flex justify-end">
+            <Button type="submit" size="sm">
+              Simpan nama
+            </Button>
+          </div>
+        </form>
+
+        <form className="space-y-3 pt-4 border-t border-outline-variant/30" onSubmit={changePassword}>
+          <p className="text-label-lg text-on-surface">Ganti kata sandi</p>
+          <Input type="password" placeholder="Kata sandi lama" value={pw.old} onChange={(e) => setPw((p) => ({ ...p, old: e.target.value }))} autoComplete="current-password" aria-label="Kata sandi lama" />
+          <Input type="password" placeholder="Kata sandi baru (min. 8 karakter)" value={pw.new} onChange={(e) => setPw((p) => ({ ...p, new: e.target.value }))} autoComplete="new-password" aria-label="Kata sandi baru" />
+          {pwMsg && <p className={`text-body-sm ${pwMsg.ok ? 'text-mint-ink' : 'text-raspberry-ink'}`}>{pwMsg.text}</p>}
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" variant="secondary" disabled={busy || !pw.old || pw.new.length < 8}>
+              Ganti kata sandi
+            </Button>
+          </div>
+        </form>
+
+        <div className="pt-4 border-t border-outline-variant/30">
+          <Button variant="danger" className="w-full" onClick={() => session.logout()}>
+            <LogOut size={18} /> Keluar dari akun
           </Button>
-          <Button type="submit">Simpan</Button>
         </div>
-      </form>
+      </div>
     </Modal>
+  )
+}
+
+// Saving status of local changes to the server.
+const SyncBadge = () => {
+  const { status, error } = useSelector((state) => state.sync)
+  if (status === 'idle') return null
+  return status === 'saving' ? (
+    <span className="hidden sm:flex items-center gap-1 text-label-sm text-on-surface-variant" title="Menyimpan perubahan">
+      <Loader2 size={14} className="animate-spin" /> Menyimpan…
+    </span>
+  ) : (
+    <button onClick={() => flush()} className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-raspberry-soft text-raspberry-ink text-label-sm" title={error}>
+      <CloudOff size={14} /> <span className="hidden sm:inline">Belum tersimpan ·</span> Coba lagi
+    </button>
   )
 }
 
@@ -159,6 +217,7 @@ export const TopBar = () => {
 
         <div className="flex items-center gap-3">
           <span className="hidden sm:block lg:hidden text-headline-md font-extrabold text-primary tracking-tight">SimpananMu</span>
+          <SyncBadge />
           <NotificationBell />
         </div>
       </div>
