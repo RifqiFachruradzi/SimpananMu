@@ -3,8 +3,8 @@ import { toISODate } from '../utils/finance.js'
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
-// Sample data spread over the last three months so the charts have something
-// to show on first launch. Only used when nothing is saved in localStorage.
+// Sample data spread over the last three months, loaded on request via
+// "Muat data contoh" so a new user can try the charts.
 const buildSeed = () => {
   const now = new Date()
   const day = (monthsAgo, d) => {
@@ -28,11 +28,11 @@ const buildSeed = () => {
   return rows.map((t, i) => ({ ...t, id: `seed-${i + 1}`, note: '' }))
 }
 
-export const defaultTransactionState = () => ({ transactions: buildSeed() })
+const sampleState = () => ({ transactions: buildSeed() })
 
 const transactionSlice = createSlice({
   name: 'transactions',
-  initialState: defaultTransactionState,
+  initialState: { transactions: [] },
   reducers: {
     addTransaction: {
       reducer: (state, action) => {
@@ -53,7 +53,7 @@ const transactionSlice = createSlice({
       },
       prepare: (transactions) => ({ payload: transactions.map((t) => ({ ...t, id: newId() })) }),
     },
-    resetTransactions: () => defaultTransactionState(),
+    resetTransactions: () => sampleState(),
     clearTransactions: (state) => {
       state.transactions = []
     },

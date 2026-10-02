@@ -3,22 +3,9 @@ import { createSlice } from '@reduxjs/toolkit'
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
 // Monthly spending limits per expense category, and savings goals.
-export const defaultPlanningState = () => ({
-  budgets: {
-    'Bahan Baku': 1000000,
-    Marketing: 600000,
-    Tagihan: 500000,
-    Transportasi: 300000,
-  },
-  goals: [
-    { id: 'goal-1', name: 'Dana Darurat', target: 15000000, saved: 4500000, deadline: '' },
-    { id: 'goal-2', name: 'Laptop Baru', target: 12000000, saved: 2000000, deadline: '' },
-  ],
-})
-
 const planningSlice = createSlice({
   name: 'planning',
-  initialState: defaultPlanningState,
+  initialState: { budgets: {}, goals: [] },
   reducers: {
     setBudget: (state, action) => {
       const { category, limit } = action.payload
