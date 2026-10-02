@@ -57,7 +57,8 @@ const streamReply = async (history, context, onText, signal) => {
   if (!res.ok || type.includes('text/html')) {
     const data = type.includes('application/json') ? await res.json().catch(() => ({})) : {}
     if (res.status === 404 || res.status === 405 || data.code === 'not_configured' || type.includes('text/html')) throw new OfflineError('unavailable')
-    throw new Error(data.error || `Gagal (${res.status})`)
+    const message = data.error || `Gagal (${res.status})`
+    throw new Error(data.detail ? `${message}\n\nDetail: \`${data.detail.replace(/`/g, "'")}\`` : message)
   }
 
   const reader = res.body.getReader()

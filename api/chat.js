@@ -4,8 +4,11 @@ import { ApiError, FinishReason, GoogleGenAI } from '@google/genai'
 // production and as Vite dev middleware locally (see vite.config.js).
 // Requires GEMINI_API_KEY in the environment (free key: aistudio.google.com).
 
-// Alias that follows Google's current Flash model; override with GEMINI_MODEL.
-const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest'
+// Tried in order. The free tier often answers 503 (overloaded) or 429 (per-model
+// quota), and a model name can be unavailable for a key (404), so fall back to
+// the next model before giving up. GEMINI_MODEL, if set, is tried first.
+const MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'].filter(Boolean))]
+const RETRY_NEXT_MODEL = new Set([404, 429, 500, 503])
 const MAX_MESSAGES = 20
 const MAX_CHARS = 4000
 const MAX_CONTEXT_CHARS = 20000
@@ -29,6 +32,17 @@ const readBody = async (req) => {
   const chunks = []
   for await (const chunk of req) chunks.push(chunk)
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+}
+
+// Short, user-safe description of an upstream error, e.g. "503 UNAVAILABLE: The model is overloaded".
+const describeError = (err) => {
+  if (!(err instanceof ApiError)) return err?.name === 'TimeoutError' ? 'timeout' : String(err?.message || err).slice(0, 160)
+  try {
+    const { error } = JSON.parse(err.message)
+    return `${err.status} ${error?.status || ''}: ${error?.message || ''}`.slice(0, 200)
+  } catch {
+    return `${err.status}: ${err.message}`.slice(0, 200)
+  }
 }
 
 const sendJSON = (res, status, payload) => {
@@ -96,9 +110,9 @@ export default async function handler(req, res) {
     res.setHeader('X-Accel-Buffering', 'no')
   }
 
-  try {
-    const stream = await ai.models.generateContentStream({
-      model: MODEL,
+  const request = (model) =>
+    ai.models.generateContentStream({
+      model,
       // Gemini uses "model" for the assistant role.
       contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
       config: {
@@ -107,6 +121,19 @@ export default async function handler(req, res) {
         abortSignal: controller.signal,
       },
     })
+
+  try {
+    let stream
+    for (const [i, model] of MODELS.entries()) {
+      try {
+        stream = await request(model)
+        break
+      } catch (err) {
+        const last = i === MODELS.length - 1
+        if (last || !(err instanceof ApiError) || !RETRY_NEXT_MODEL.has(err.status)) throw err
+        console.warn(`chat: ${model} failed (${describeError(err)}), trying ${MODELS[i + 1]}`)
+      }
+    }
 
     let finishReason
     let blocked = false
@@ -136,11 +163,17 @@ export default async function handler(req, res) {
     console.error('chat: gemini error', err)
     if (!started) {
       const status = err instanceof ApiError ? err.status : 502
-      const notConfigured = status === 400 || status === 401 || status === 403
-      return sendJSON(res, status === 429 ? 429 : notConfigured ? 503 : 502, {
-        error: status === 429 ? 'Kuota gratis Gemini sedang habis atau terlalu banyak permintaan. Coba lagi sebentar lagi.' : 'Gagal mendapatkan jawaban dari AI.',
-        code: notConfigured ? 'not_configured' : 'upstream_error',
-      })
+      const detail = describeError(err)
+      if (status === 429) {
+        return sendJSON(res, 429, { error: 'Kuota gratis Gemini sedang habis atau terlalu banyak permintaan. Coba lagi sebentar lagi.', detail, code: 'rate_limited' })
+      }
+      if (status === 401 || status === 403 || (status === 400 && /api key|API_KEY/i.test(detail))) {
+        return sendJSON(res, 503, { error: 'API key Gemini tidak valid atau tidak punya akses. Periksa GEMINI_API_KEY di Vercel.', detail, code: 'bad_key' })
+      }
+      if (status === 503 || status === 500) {
+        return sendJSON(res, 503, { error: 'Server Gemini sedang sibuk. Coba lagi beberapa saat lagi.', detail, code: 'upstream_busy' })
+      }
+      return sendJSON(res, 502, { error: 'Gagal mendapatkan jawaban dari AI.', detail, code: 'upstream_error' })
     }
     res.end('\n\n_(Koneksi ke AI terputus.)_')
   }
