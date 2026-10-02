@@ -1,10 +1,11 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { ApiError, FinishReason, GoogleGenAI } from '@google/genai'
 
 // Serverless endpoint for the AI Buddy chat. Runs as a Vercel Function in
 // production and as Vite dev middleware locally (see vite.config.js).
-// Requires ANTHROPIC_API_KEY in the environment.
+// Requires GEMINI_API_KEY in the environment (free key: aistudio.google.com).
 
-const MODEL = 'claude-opus-5-5'
+// Alias that follows Google's current Flash model; override with GEMINI_MODEL.
+const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest'
 const MAX_MESSAGES = 20
 const MAX_CHARS = 4000
 const MAX_CONTEXT_CHARS = 20000
@@ -59,8 +60,9 @@ export default async function handler(req, res) {
     res.setHeader('Allow', 'POST')
     return sendJSON(res, 405, { error: 'Method not allowed' })
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return sendJSON(res, 503, { error: 'AI belum dikonfigurasi (ANTHROPIC_API_KEY kosong).', code: 'not_configured' })
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) {
+    return sendJSON(res, 503, { error: 'AI belum dikonfigurasi (GEMINI_API_KEY kosong).', code: 'not_configured' })
   }
 
   let body
@@ -76,27 +78,14 @@ export default async function handler(req, res) {
   }
   const context = JSON.stringify(body.context ?? {}).slice(0, MAX_CONTEXT_CHARS)
 
-  const client = new Anthropic()
-  let stream
-  try {
-    stream = client.beta.messages.stream({
-      model: MODEL,
-      max_tokens: 16000,
-      output_config: { effort: 'medium' },
-      // Re-run on Anthropic's recommended model if a safety classifier declines.
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      system: [
-        { type: 'text', text: SYSTEM_PROMPT },
-        { type: 'text', text: `Data keuangan pengguna saat ini (JSON, nominal dalam Rupiah):\n${context}` },
-      ],
-      messages,
-    })
-  } catch (err) {
-    console.error('chat: failed to start stream', err)
-    return sendJSON(res, 502, { error: 'Gagal menghubungi AI.' })
-  }
+  // Stop generating if the browser disconnects. (Listen on res: req's 'close'
+  // fires as soon as the request body has been read.)
+  const controller = new AbortController()
+  res.on('close', () => {
+    if (!res.writableEnded) controller.abort()
+  })
 
+  const ai = new GoogleGenAI({ apiKey })
   let started = false
   const start = () => {
     if (started) return
@@ -107,33 +96,50 @@ export default async function handler(req, res) {
     res.setHeader('X-Accel-Buffering', 'no')
   }
 
-  req.on('close', () => {
-    if (!res.writableEnded) stream.abort()
-  })
-
   try {
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+    const stream = await ai.models.generateContentStream({
+      model: MODEL,
+      // Gemini uses "model" for the assistant role.
+      contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      config: {
+        systemInstruction: `${SYSTEM_PROMPT}\n\nData keuangan pengguna saat ini (JSON, nominal dalam Rupiah):\n${context}`,
+        maxOutputTokens: 8192,
+        abortSignal: controller.signal,
+      },
+    })
+
+    let finishReason
+    let blocked = false
+    let wrote = false
+    for await (const chunk of stream) {
+      if (chunk.promptFeedback?.blockReason) blocked = true
+      finishReason = chunk.candidates?.[0]?.finishReason ?? finishReason
+      const text = chunk.text
+      if (text) {
         start()
-        res.write(event.delta.text)
+        res.write(text)
+        wrote = true
       }
     }
-    const final = await stream.finalMessage()
     start()
-    if (final.stop_reason === 'refusal') {
-      res.write('\n\nMaaf, aku tidak bisa membantu permintaan itu. Coba tanyakan hal lain seputar keuanganmu ya.')
-    } else if (final.stop_reason === 'max_tokens') {
+    const stoppedEarly = finishReason && finishReason !== FinishReason.STOP
+    if (blocked || (!wrote && stoppedEarly)) {
+      res.write('Maaf, aku tidak bisa membantu permintaan itu. Coba tanyakan hal lain seputar keuanganmu ya.')
+    } else if (finishReason === FinishReason.MAX_TOKENS) {
       res.write('\n\n_(Jawaban terpotong karena terlalu panjang.)_')
+    } else if (stoppedEarly) {
+      res.write('\n\n_(Jawaban dihentikan oleh filter keamanan.)_')
     }
     res.end()
   } catch (err) {
-    if (stream.aborted || req.destroyed) return
-    console.error('chat: stream error', err)
+    if (controller.signal.aborted) return
+    console.error('chat: gemini error', err)
     if (!started) {
-      const status = err instanceof Anthropic.RateLimitError ? 429 : err instanceof Anthropic.AuthenticationError ? 503 : 502
-      return sendJSON(res, status, {
-        error: status === 429 ? 'AI sedang sibuk, coba lagi sebentar lagi.' : 'Gagal mendapatkan jawaban dari AI.',
-        code: status === 503 ? 'not_configured' : 'upstream_error',
+      const status = err instanceof ApiError ? err.status : 502
+      const notConfigured = status === 400 || status === 401 || status === 403
+      return sendJSON(res, status === 429 ? 429 : notConfigured ? 503 : 502, {
+        error: status === 429 ? 'Kuota gratis Gemini sedang habis atau terlalu banyak permintaan. Coba lagi sebentar lagi.' : 'Gagal mendapatkan jawaban dari AI.',
+        code: notConfigured ? 'not_configured' : 'upstream_error',
       })
     }
     res.end('\n\n_(Koneksi ke AI terputus.)_')
