@@ -12,7 +12,7 @@ const renderInline = (text, keyPrefix) => {
     const token = match[0]
     const key = `${keyPrefix}-${i++}`
     if (token.startsWith('**')) parts.push(<strong key={key}>{token.slice(2, -2)}</strong>)
-    else if (token.startsWith('`')) parts.push(<code key={key} className="px-1 rounded bg-fuchsia-100/70 text-fuchsia-800 text-[0.9em]">{token.slice(1, -1)}</code>)
+    else if (token.startsWith('`')) parts.push(<code key={key} className="px-1 rounded bg-primary-fixed/50 text-on-primary-container text-[0.9em]">{token.slice(1, -1)}</code>)
     else parts.push(<em key={key}>{token.slice(1, -1)}</em>)
     last = match.index + token.length
   }
@@ -53,12 +53,12 @@ const Markdown = ({ text }) => {
     if (!line.trim()) return
     if (heading) {
       blocks.push(
-        <p key={index} className="font-black text-gray-900">
+        <p key={index} className="font-extrabold text-on-surface">
           {renderInline(heading[2], `h${index}`)}
         </p>,
       )
     } else if (/^-{3,}$/.test(line.trim())) {
-      blocks.push(<hr key={index} className="border-fuchsia-100" />)
+      blocks.push(<hr key={index} className="border-primary-container/15" />)
     } else {
       blocks.push(<p key={index}>{renderInline(line, `p${index}`)}</p>)
     }

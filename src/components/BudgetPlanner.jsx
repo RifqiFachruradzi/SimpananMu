@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { Check, Target } from 'lucide-react'
 import { setBudget } from '../store/planningSlice.js'
 import { selectTransactions } from '../store/transactionSlice.js'
-import { CATEGORIES, formatMonth, formatRupiah, groupByCategory, monthKey, todayISO } from '../utils/finance.js'
-import { Button, Card, Input, PageHeader, ProgressBar } from './ui.jsx'
+import { categoryMeta } from '../utils/categories.js'
+import { CATEGORIES, formatCompact, formatMonth, formatRupiah, groupByCategory, monthKey, todayISO } from '../utils/finance.js'
+import { Button, Input, PageHeader, Pill, ProgressBar, SectionTitle } from './ui.jsx'
 
-const BudgetRow = ({ category, limit, spent }) => {
+const BudgetCard = ({ category, limit, spent }) => {
   const dispatch = useDispatch()
+  const meta = categoryMeta(category)
   const [draft, setDraft] = useState(limit ? String(limit) : '')
   const dirty = Number(draft || 0) !== (limit || 0)
   const over = limit > 0 && spent > limit
+  const pct = limit > 0 ? Math.round((spent / limit) * 100) : null
 
   const save = (e) => {
     e.preventDefault()
@@ -17,21 +21,48 @@ const BudgetRow = ({ category, limit, spent }) => {
   }
 
   return (
-    <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-12 gap-3 md:items-center py-4 border-b border-gray-100 last:border-none">
-      <div className="md:col-span-3">
-        <p className="font-bold text-gray-900">{category}</p>
-        <p className={`text-sm ${over ? 'text-rose-600 font-semibold' : 'text-gray-500'}`}>
-          Terpakai {formatRupiah(spent)}
-          {limit > 0 && (over ? ` · lebih ${formatRupiah(spent - limit)}` : ` · sisa ${formatRupiah(limit - spent)}`)}
-        </p>
+    <form
+      onSubmit={save}
+      className={`bg-white p-4 rounded-card border shadow-sm flex flex-col gap-3 ${limit ? meta.border : 'border-outline-variant/30 border-dashed'}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className={`icon-disc w-12 h-12 text-2xl ${meta.disc}`}>{meta.emoji}</span>
+          <div className="min-w-0">
+            <h3 className="text-label-lg text-on-surface truncate">{category}</h3>
+            <p className={`text-body-sm font-semibold tnum ${over ? 'text-raspberry-ink' : meta.text}`}>
+              {formatRupiah(spent)}
+              {limit > 0 && <span className="text-on-surface-variant font-normal"> / {formatCompact(limit)}</span>}
+            </p>
+          </div>
+        </div>
+        {pct !== null && <Pill className={over ? 'bg-raspberry-soft text-raspberry-ink' : meta.pill}>{pct}%</Pill>}
       </div>
-      <div className="md:col-span-5">
-        {limit > 0 ? <ProgressBar value={spent} max={limit} danger={over} /> : <p className="text-sm text-gray-400">Belum ada batas anggaran</p>}
-      </div>
-      <div className="md:col-span-4 flex gap-2">
-        <Input type="number" min="0" inputMode="numeric" placeholder="Batas / bulan" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label={`Anggaran ${category}`} />
-        <Button type="submit" variant={dirty ? 'primary' : 'secondary'} disabled={!dirty}>
-          Simpan
+
+      {limit > 0 ? (
+        <>
+          <ProgressBar value={spent} max={limit} danger={over} color={meta.bar} />
+          <p className={`text-label-sm ${over ? 'text-raspberry-ink' : 'text-on-surface-variant'}`}>
+            {over ? `Lewat ${formatRupiah(spent - limit)} ⚠️` : `Sisa ${formatRupiah(limit - spent)}`}
+          </p>
+        </>
+      ) : (
+        <p className="text-label-sm text-on-surface-variant">Belum ada batas anggaran</p>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          min="0"
+          inputMode="numeric"
+          placeholder="Batas / bulan"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          aria-label={`Anggaran ${category}`}
+          className="!rounded-full !py-2 text-body-md"
+        />
+        <Button type="submit" size="sm" variant={dirty ? 'primary' : 'secondary'} disabled={!dirty} aria-label={`Simpan anggaran ${category}`}>
+          <Check size={16} /> Simpan
         </Button>
       </div>
     </form>
@@ -49,45 +80,60 @@ const BudgetPlanner = () => {
   )
 
   const totalLimit = Object.values(budgets).reduce((s, v) => s + v, 0)
-  const totalSpentBudgeted = Object.keys(budgets).reduce((s, c) => s + (spent[c] || 0), 0)
+  const totalSpent = Object.keys(budgets).reduce((s, c) => s + (spent[c] || 0), 0)
   const overCount = Object.entries(budgets).filter(([c, limit]) => (spent[c] || 0) > limit).length
+  const budgeted = CATEGORIES.expense.filter((c) => budgets[c])
+  const unbudgeted = CATEGORIES.expense.filter((c) => !budgets[c])
+
+  const card = (category) => (
+    <BudgetCard key={`${category}:${budgets[category] || 0}`} category={category} limit={budgets[category] || 0} spent={spent[category] || 0} />
+  )
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="max-w-content mx-auto px-5 md:px-8 pt-4 md:pt-6 space-y-6">
       <PageHeader
-        icon="🎯"
-        title="Anggaran Bulanan"
-        subtitle="Tetapkan batas pengeluaran per kategori dan pantau realisasinya setiap bulan. Kosongkan nilai lalu simpan untuk menghapus anggaran."
-        actions={<Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Bulan" className="!w-auto" />}
+        title="Anggaran"
+        subtitle="Atur batas pengeluaran bulanan per kategori. Kosongkan nilai lalu simpan untuk menghapus."
+        actions={
+          <Input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Bulan" className="!w-auto !rounded-full !py-2" />
+        }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Anggaran</p>
-          <p className="mt-1 text-2xl font-black text-fuchsia-600">{formatRupiah(totalLimit)}</p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Terpakai ({formatMonth(month)})</p>
-          <p className={`mt-1 text-2xl font-black ${totalSpentBudgeted > totalLimit ? 'text-rose-600' : 'text-emerald-600'}`}>
-            {formatRupiah(totalSpentBudgeted)}
+      <section className="relative overflow-hidden rounded-card-lg p-6 bg-white border border-primary-container/15 shadow-level-2">
+        <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-primary-fixed/60 blur-2xl pointer-events-none" />
+        <div className="relative">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blush text-label-sm text-on-primary-container">
+              <Target size={14} /> {formatMonth(month)}
+            </span>
+            <Pill className={overCount ? 'bg-raspberry-soft text-raspberry-ink' : 'bg-mint-soft text-mint-ink'}>
+              {overCount ? `${overCount} kategori lewat batas` : 'Semua aman ✨'}
+            </Pill>
+          </div>
+          <p className="mt-4 text-label-md text-on-surface-variant">Terpakai dari anggaran</p>
+          <p className="text-currency-mobile md:text-currency tnum text-on-surface">
+            {formatRupiah(totalSpent)}
+            <span className="text-body-lg font-semibold text-on-surface-variant"> / {formatRupiah(totalLimit)}</span>
           </p>
           <div className="mt-3">
-            <ProgressBar value={totalSpentBudgeted} max={totalLimit} danger={totalSpentBudgeted > totalLimit} />
+            <ProgressBar value={totalSpent} max={totalLimit} danger={totalSpent > totalLimit} thick />
           </div>
-        </Card>
-        <Card className="p-6">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Kategori Melebihi Batas</p>
-          <p className={`mt-1 text-2xl font-black ${overCount ? 'text-rose-600' : 'text-emerald-600'}`}>
-            {overCount ? `${overCount} kategori ⚠️` : 'Aman ✅'}
-          </p>
-        </Card>
-      </div>
+        </div>
+      </section>
 
-      <Card className="px-6 py-2">
-        {CATEGORIES.expense.map((category) => (
-          <BudgetRow key={`${category}:${budgets[category] || 0}`} category={category} limit={budgets[category] || 0} spent={spent[category] || 0} />
-        ))}
-      </Card>
+      {budgeted.length > 0 && (
+        <section>
+          <SectionTitle title="Kategori Beranggaran" subtitle={`${budgeted.length} kategori`} />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{budgeted.map(card)}</div>
+        </section>
+      )}
+
+      {unbudgeted.length > 0 && (
+        <section>
+          <SectionTitle title="Belum Dianggarkan" subtitle="Tambahkan batas agar pengeluaran lebih terkontrol" />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{unbudgeted.map(card)}</div>
+        </section>
+      )}
     </div>
   )
 }

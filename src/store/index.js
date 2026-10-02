@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import transactionReducer from './transactionSlice.js'
 import planningReducer from './planningSlice.js'
+import profileReducer from './profileSlice.js'
 
 const STORAGE_KEY = 'simpananmu:v1'
 
@@ -20,6 +21,7 @@ export const store = configureStore({
   reducer: {
     transactions: transactionReducer,
     planning: planningReducer,
+    profile: profileReducer,
   },
   preloadedState: loadState(),
 })

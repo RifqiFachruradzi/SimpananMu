@@ -174,3 +174,14 @@ export const downloadFile = (content, filename, mime = 'text/csv;charset=utf-8')
   a.click()
   URL.revokeObjectURL(url)
 }
+
+// "Hari ini", "Kemarin", or a short date for older entries.
+export const formatRelativeDay = (iso) => {
+  const diff = Math.round((parseDate(todayISO()) - parseDate(iso)) / 86400000)
+  if (diff === 0) return 'Hari ini'
+  if (diff === 1) return 'Kemarin'
+  return formatDate(iso, { day: 'numeric', month: 'short' })
+}
+
+// Thousands-separated absolute amount without the currency symbol.
+export const formatAmount = (value) => new Intl.NumberFormat('id-ID').format(Math.abs(value || 0))

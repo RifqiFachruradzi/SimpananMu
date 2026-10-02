@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
+import { RotateCcw, SendHorizontal, Sparkles, Square } from 'lucide-react'
 import { selectTransactions } from '../store/transactionSlice.js'
 import { buildFinanceContext, localAdvice } from '../utils/advisor.js'
 import Markdown from './Markdown.jsx'
-import { Button, Card, PageHeader } from './ui.jsx'
+import { Card, IconButton } from './ui.jsx'
 
 const STORAGE_KEY = 'simpananmu:chat:v1'
 
@@ -140,38 +141,32 @@ const AiBuddy = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
-      <PageHeader
-        icon="💖"
-        title="AI Buddy"
-        subtitle="Tanya rencana hemat, anggaran, target tabungan, atau apa pun soal keuanganmu. Buddy membaca data di aplikasi ini untuk memberi saran yang personal."
-        actions={
-          <Button variant="secondary" onClick={reset} disabled={messages.length <= 1 && !busy}>
-            🧹 Percakapan baru
-          </Button>
-        }
-      />
-
-      <Card className="flex flex-col h-[calc(100vh-15rem)] min-h-[480px] overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/70 bg-white/40">
+    <div className="max-w-4xl mx-auto px-5 md:px-8 pt-4 md:pt-6 space-y-6">
+      <Card className="flex flex-col h-[calc(100dvh-12.5rem)] lg:h-[calc(100dvh-8rem)] min-h-[420px] overflow-hidden !bg-white">
+        <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-primary-container/10">
           <div className="relative">
-            <div className="h-10 w-10 rounded-full glossy-btn flex items-center justify-center text-xl">🤖</div>
-            <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white ${offline ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+            <div className="icon-disc w-11 h-11 bg-gradient-to-tr from-primary-container to-secondary-container text-white shadow-bead">
+              <Sparkles size={22} />
+            </div>
+            <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white ${offline ? 'bg-secondary-container' : 'bg-mint'}`} />
           </div>
-          <div>
-            <p className="font-black text-gray-900 leading-tight">Buddy</p>
-            <p className="text-xs text-gray-500">{offline ? 'Mode offline: saran otomatis dari datamu' : 'Asisten keuangan AI'}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-headline-sm font-extrabold text-on-surface leading-tight">AI Buddy</h1>
+            <p className="text-label-sm text-on-surface-variant truncate">{offline ? 'Mode offline · saran otomatis dari datamu' : 'Asisten keuangan pribadimu'}</p>
           </div>
+          <IconButton label="Percakapan baru" onClick={reset} disabled={messages.length <= 1 && !busy} className="disabled:opacity-40">
+            <RotateCcw size={18} />
+          </IconButton>
         </div>
 
         <div ref={listRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-4" aria-live="polite">
           {messages.map((m) => (
             <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`max-w-[88%] sm:max-w-[78%] rounded-3xl px-4 py-3 text-[15px] ${
+                className={`max-w-[88%] sm:max-w-[78%] rounded-card px-4 py-3 text-body-md ${
                   m.role === 'user'
                     ? 'glossy-btn text-white rounded-br-lg whitespace-pre-wrap'
-                    : `glass-strong text-gray-800 rounded-bl-lg ${m.error ? 'ring-2 ring-rose-200' : ''}`
+                    : `glass-strong text-on-surface rounded-bl-lg ${m.error ? 'ring-2 ring-raspberry/30' : ''}`
                 }`}
               >
                 {m.role === 'user' ? (
@@ -179,7 +174,7 @@ const AiBuddy = () => {
                 ) : m.pending && !m.content ? (
                   <span className="inline-flex gap-1 py-1" aria-label="Buddy sedang mengetik">
                     {[0, 150, 300].map((d) => (
-                      <span key={d} className="h-2 w-2 rounded-full bg-fuchsia-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                      <span key={d} className="h-2 w-2 rounded-full bg-primary-container animate-bounce" style={{ animationDelay: `${d}ms` }} />
                     ))}
                   </span>
                 ) : (
@@ -205,7 +200,7 @@ const AiBuddy = () => {
             e.preventDefault()
             send(input)
           }}
-          className="flex items-end gap-2 p-3 sm:p-4 border-t border-white/70 bg-white/40"
+          className="flex items-end gap-2 p-3 sm:p-4 border-t border-primary-container/10"
         >
           <textarea
             ref={inputRef}
@@ -218,25 +213,29 @@ const AiBuddy = () => {
                 send(input)
               }
             }}
-            placeholder="Tulis pertanyaanmu… (Enter untuk kirim)"
-            className="flex-1 resize-none max-h-40 px-4 py-3 rounded-2xl border-2 border-white bg-white/80 focus:outline-none focus:ring-4 focus:ring-fuchsia-100 focus:border-fuchsia-300"
+            placeholder="Tanya Buddy…"
+            className="flex-1 resize-none max-h-40 px-5 py-3 rounded-[1.5rem] border border-outline-variant/60 bg-surface-container-low text-body-lg placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-[3px] focus:ring-primary-container/20 focus:border-primary-container"
             aria-label="Pesan untuk Buddy"
           />
           {busy ? (
-            <Button type="button" variant="secondary" onClick={() => abortRef.current?.abort()} className="!py-3">
-              ⏹ Stop
-            </Button>
+            <IconButton label="Hentikan" type="button" onClick={() => abortRef.current?.abort()} className="!w-12 !h-12">
+              <Square size={18} fill="currentColor" />
+            </IconButton>
           ) : (
-            <Button type="submit" disabled={!input.trim()} className="!py-3">
-              Kirim ➤
-            </Button>
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              aria-label="Kirim"
+              className="icon-disc w-12 h-12 glossy-btn transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+            >
+              <SendHorizontal size={20} />
+            </button>
           )}
         </form>
+        <p className="px-4 pb-2 -mt-1 text-[10px] text-center text-on-surface-variant">
+          Buddy bisa keliru. Saran bersifat umum, bukan nasihat keuangan profesional.
+        </p>
       </Card>
-
-      <p className="text-xs text-center text-gray-500">
-        Buddy bisa keliru. Saran bersifat umum dan bukan nasihat keuangan profesional.
-      </p>
     </div>
   )
 }

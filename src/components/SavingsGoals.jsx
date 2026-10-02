@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { Pencil, PiggyBank, Plus, Rocket, Trash2, Trophy } from 'lucide-react'
 import { addGoal, contributeToGoal, deleteGoal, updateGoal } from '../store/planningSlice.js'
 import { formatDate, formatRupiah, parseDate, todayISO } from '../utils/finance.js'
-import { Button, Card, EmptyState, Field, Input, Modal, PageHeader, ProgressBar } from './ui.jsx'
+import { Button, Card, EmptyState, Field, IconButton, Input, Modal, PageHeader, ProgressBar, Segmented } from './ui.jsx'
 
 const GoalForm = ({ goal, onClose }) => {
   const dispatch = useDispatch()
@@ -44,7 +45,7 @@ const GoalForm = ({ goal, onClose }) => {
         <Field label="Tenggat (opsional)">
           <Input type="date" value={form.deadline} onChange={set('deadline')} />
         </Field>
-        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {error && <p className="text-sm text-raspberry-ink">{error}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Batal
@@ -72,28 +73,21 @@ const ContributeForm = ({ goal, onClose }) => {
   return (
     <Modal title={`💵 ${goal.name}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 p-1 bg-fuchsia-50 rounded-2xl">
-          {[
-            ['deposit', '➕ Setor'],
-            ['withdraw', '➖ Tarik'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setMode(value)}
-              className={`py-2.5 rounded-xl font-bold transition-all ${mode === value ? 'glossy-btn' : 'text-gray-600 hover:bg-white'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'deposit', label: '➕ Setor' },
+            { value: 'withdraw', label: '➖ Tarik' },
+          ]}
+        />
         <Field label="Nominal (Rp)">
           <Input type="number" min="0" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
         </Field>
-        <p className="text-sm text-gray-500">
+        <p className="text-body-sm text-on-surface-variant">
           Terkumpul saat ini {formatRupiah(goal.saved)} dari {formatRupiah(goal.target)}.
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Batal
           </Button>
@@ -121,51 +115,60 @@ const GoalCard = ({ goal, onEdit, onContribute }) => {
   const overdue = goal.deadline && !done && goal.deadline < todayISO()
 
   return (
-    <Card className="p-6 flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-black text-gray-900">
-            {done ? '🏆' : '🐷'} {goal.name}
-          </h3>
-          {goal.deadline && (
-            <p className={`text-sm ${overdue ? 'text-rose-600 font-semibold' : 'text-gray-500'}`}>
-              Tenggat {formatDate(goal.deadline)}
-              {overdue && ' · terlewat'}
-            </p>
-          )}
+    <section className="bg-white rounded-card-lg p-5 border border-outline-variant/30 shadow-[0_10px_28px_-6px_rgba(244,114,182,0.12)] flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className={`icon-disc w-11 h-11 ${done ? 'bg-mint-soft text-mint-ink' : 'bg-tertiary-fixed/60 text-tertiary'}`}>
+            {done ? <Trophy size={20} /> : <Rocket size={20} />}
+          </span>
+          <div className="min-w-0">
+            <p className="text-label-sm uppercase text-tertiary">{done ? 'Tercapai' : 'Tabungan Impian'}</p>
+            <h3 className="text-headline-sm font-bold text-on-surface truncate">{goal.name}</h3>
+          </div>
         </div>
-        <span className={`text-2xl font-black ${done ? 'text-emerald-600' : 'text-fuchsia-600'}`}>{pct}%</span>
+        <span className={`text-headline-md font-extrabold ${done ? 'text-mint-ink' : 'text-primary'}`}>{pct}%</span>
       </div>
-      <ProgressBar value={goal.saved} max={goal.target} />
-      <div className="text-sm text-gray-600 space-y-1">
-        <p>
-          <b className="text-gray-900">{formatRupiah(goal.saved)}</b> / {formatRupiah(goal.target)}
-        </p>
+      <div className="flex flex-wrap justify-between gap-x-3 text-body-sm text-on-surface-variant">
+        <span>
+          Terkumpul: <strong className="text-on-surface tnum">{formatRupiah(goal.saved)}</strong>
+        </span>
+        <span className="tnum">Target: {formatRupiah(goal.target)}</span>
+      </div>
+      <ProgressBar value={goal.saved} max={goal.target} thick />
+      <div className="text-label-sm text-on-surface-variant space-y-0.5">
         {done ? (
-          <p className="text-emerald-600 font-semibold">Target tercapai! 🎉</p>
+          <p className="text-mint-ink">Target tercapai! 🎉</p>
         ) : (
           <>
-            <p>Kurang {formatRupiah(remaining)}</p>
-            {months !== null && months > 0 && <p>Perlu menabung ± {formatRupiah(Math.ceil(remaining / months))} / bulan</p>}
+            <p>
+              Sisa <strong className="text-primary tnum">{formatRupiah(remaining)}</strong> lagi ✨
+            </p>
+            {months !== null && months > 0 && <p>Nabung ± {formatRupiah(Math.ceil(remaining / months))} / bulan</p>}
           </>
         )}
+        {goal.deadline && (
+          <p className={overdue ? 'text-raspberry-ink' : ''}>
+            Tenggat {formatDate(goal.deadline)}
+            {overdue && ' · terlewat'}
+          </p>
+        )}
       </div>
-      <div className="flex flex-wrap gap-2 mt-auto pt-2">
-        <Button className="flex-1" onClick={() => onContribute(goal)}>
-          💵 Setor / Tarik
+      <div className="flex gap-2 pt-3 mt-auto border-t border-outline-variant/20">
+        <Button className="flex-1" size="sm" onClick={() => onContribute(goal)}>
+          <PiggyBank size={16} /> Setor / Tarik
         </Button>
-        <Button variant="secondary" onClick={() => onEdit(goal)} aria-label={`Ubah ${goal.name}`}>
-          ✏️
-        </Button>
-        <Button
-          variant="danger"
+        <IconButton label={`Ubah ${goal.name}`} onClick={() => onEdit(goal)} className="!w-9 !h-9">
+          <Pencil size={16} />
+        </IconButton>
+        <IconButton
+          label={`Hapus ${goal.name}`}
           onClick={() => window.confirm(`Hapus target "${goal.name}"?`) && dispatch(deleteGoal(goal.id))}
-          aria-label={`Hapus ${goal.name}`}
+          className="!w-9 !h-9 !text-raspberry-ink hover:!bg-raspberry-soft"
         >
-          🗑️
-        </Button>
+          <Trash2 size={16} />
+        </IconButton>
       </div>
-    </Card>
+    </section>
   )
 }
 
@@ -178,28 +181,38 @@ const SavingsGoals = () => {
   const totalSaved = goals.reduce((s, g) => s + Math.min(g.saved, g.target), 0)
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="max-w-content mx-auto px-5 md:px-8 pt-4 md:pt-6 space-y-6">
       <PageHeader
-        icon="🐷"
-        title="Target Tabungan"
-        subtitle="Buat target tabungan, catat setoran, dan lihat berapa yang perlu disisihkan setiap bulan."
-        actions={<Button onClick={() => setEditing({})}>➕ Target Baru</Button>}
+        title="Tabungan"
+        subtitle="Buat target impian, catat setoran, dan lihat berapa yang perlu disisihkan tiap bulan."
+        actions={
+          <Button onClick={() => setEditing({})}>
+            <Plus size={18} /> Target Baru
+          </Button>
+        }
       />
 
       {goals.length > 0 && (
-        <Card className="p-6">
-          <div className="flex flex-wrap justify-between gap-2 mb-3">
-            <p className="font-bold text-gray-900">Progres Keseluruhan</p>
-            <p className="text-gray-600">
-              <b className="text-gray-900">{formatRupiah(totalSaved)}</b> / {formatRupiah(totalTarget)}
+        <section className="relative overflow-hidden rounded-card-lg p-6 bg-gradient-to-br from-tertiary-container via-primary-fixed-dim to-secondary-container shadow-hero text-on-tertiary-container">
+          <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/30 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 bg-white/50 px-3 py-1 rounded-full text-label-sm">
+              <PiggyBank size={14} /> {goals.length} target
+            </span>
+            <p className="mt-4 text-label-md opacity-80">Total terkumpul</p>
+            <p className="text-currency-mobile md:text-currency tnum">
+              {formatRupiah(totalSaved)}
+              <span className="text-body-lg font-semibold opacity-70"> / {formatRupiah(totalTarget)}</span>
             </p>
+            <div className="mt-3 h-3.5 p-[2px] rounded-full bg-white/50 overflow-hidden">
+              <div className="h-full rounded-full bg-white transition-all duration-500" style={{ width: `${totalTarget ? Math.min(100, (totalSaved / totalTarget) * 100) : 0}%` }} />
+            </div>
           </div>
-          <ProgressBar value={totalSaved} max={totalTarget} />
-        </Card>
+        </section>
       )}
 
       {goals.length ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {goals.map((goal) => (
             <GoalCard key={goal.id} goal={goal} onEdit={setEditing} onContribute={setContributing} />
           ))}
@@ -207,7 +220,9 @@ const SavingsGoals = () => {
       ) : (
         <Card>
           <EmptyState icon="🐷" message="Belum ada target tabungan.">
-            <Button onClick={() => setEditing({})}>➕ Buat target pertama</Button>
+            <Button onClick={() => setEditing({})}>
+              <Plus size={18} /> Buat target pertama
+            </Button>
           </EmptyState>
         </Card>
       )}

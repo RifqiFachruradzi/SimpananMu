@@ -31,16 +31,16 @@ const CategoryTable = ({ title, rows, total, tone }) => (
       <table className="w-full text-sm">
         <tbody>
           {rows.map((r) => (
-            <tr key={r.name} className="border-b border-gray-100">
-              <td className="py-2 text-gray-800">{r.name}</td>
-              <td className="py-2 text-right text-gray-500">{total ? Math.round((r.value / total) * 100) : 0}%</td>
-              <td className="py-2 text-right font-semibold text-gray-900">{formatRupiah(r.value)}</td>
+            <tr key={r.name} className="border-b border-outline-variant/30">
+              <td className="py-2 text-on-surface">{r.name}</td>
+              <td className="py-2 text-right text-on-surface-variant">{total ? Math.round((r.value / total) * 100) : 0}%</td>
+              <td className="py-2 text-right font-semibold text-on-surface">{formatRupiah(r.value)}</td>
             </tr>
           ))}
         </tbody>
       </table>
     ) : (
-      <p className="text-sm text-gray-500">Tidak ada data.</p>
+      <p className="text-sm text-on-surface-variant">Tidak ada data.</p>
     )}
   </div>
 )
@@ -108,11 +108,10 @@ const ReportGenerator = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="max-w-content mx-auto px-5 md:px-8 pt-4 md:pt-6 space-y-6">
       <div className="print:hidden space-y-6">
         <PageHeader
-          icon="📄"
-          title="Laporan Keuangan"
+          title="Laporan"
           subtitle="Buat laporan laba/rugi dengan filter periode, jenis, dan kategori. Unduh sebagai PDF atau cetak langsung."
         />
 
@@ -153,7 +152,7 @@ const ReportGenerator = () => {
               </Select>
             </Field>
           </div>
-          <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-100">
+          <div className="flex flex-wrap gap-3 pt-2 border-t border-outline-variant/30">
             <Button variant="success" onClick={generatePDF} disabled={generating || !filtered.length}>
               {generating ? '⏳ Membuat PDF…' : '⬇️ Download PDF'}
             </Button>
@@ -168,47 +167,47 @@ const ReportGenerator = () => {
       </div>
 
       {/* Report preview — also what gets captured into the PDF / printed */}
-      <div className="overflow-x-auto rounded-3xl shadow-2xl print:shadow-none print:overflow-visible">
+      <div className="overflow-x-auto rounded-card shadow-2xl print:shadow-none print:overflow-visible">
         <div ref={reportRef} className="bg-white min-w-[720px] p-10 space-y-10 print:p-0">
-          <div className="flex items-start justify-between border-b-4 border-fuchsia-500 pb-6">
+          <div className="flex items-start justify-between border-b-4 border-primary-container pb-6">
             <div>
-              <h2 className="text-3xl font-black text-gray-900 tracking-tight">LAPORAN KEUANGAN</h2>
-              <p className="text-lg text-gray-600 mt-1">Periode: {periodLabel}</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="text-3xl font-extrabold text-on-surface tracking-tight">LAPORAN KEUANGAN</h2>
+              <p className="text-lg text-on-surface-variant mt-1">Periode: {periodLabel}</p>
+              <p className="text-sm text-on-surface-variant mt-1">
                 {filters.type !== 'all' && `Jenis: ${filters.type === 'income' ? 'Pendapatan' : 'Pengeluaran'} · `}
                 {filters.category !== 'all' && `Kategori: ${filters.category} · `}
                 {filtered.length} transaksi
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-black text-fuchsia-600">💰 SimpananMu</p>
-              <p className="text-sm text-gray-500">Dicetak {new Date().toLocaleString('id-ID')}</p>
+              <p className="text-2xl font-extrabold text-primary">💰 SimpananMu</p>
+              <p className="text-sm text-on-surface-variant">Dicetak {new Date().toLocaleString('id-ID')}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-200">
-              <p className="text-sm font-bold text-emerald-800 uppercase tracking-wider">Total Pendapatan</p>
-              <p className="mt-2 text-2xl font-black text-emerald-600">{formatRupiah(totalIncome)}</p>
+            <div className="p-6 rounded-tile bg-mint-soft/60 border-2 border-mint/40">
+              <p className="text-sm font-bold text-mint-ink uppercase tracking-wider">Total Pendapatan</p>
+              <p className="mt-2 text-2xl font-extrabold text-mint-ink">{formatRupiah(totalIncome)}</p>
             </div>
-            <div className="p-6 rounded-2xl bg-rose-50 border-2 border-rose-200">
-              <p className="text-sm font-bold text-rose-800 uppercase tracking-wider">Total Pengeluaran</p>
-              <p className="mt-2 text-2xl font-black text-rose-600">{formatRupiah(totalExpense)}</p>
+            <div className="p-6 rounded-tile bg-raspberry-soft/60 border-2 border-raspberry/30">
+              <p className="text-sm font-bold text-raspberry-ink uppercase tracking-wider">Total Pengeluaran</p>
+              <p className="mt-2 text-2xl font-extrabold text-raspberry-ink">{formatRupiah(totalExpense)}</p>
             </div>
-            <div className={`p-6 rounded-2xl border-2 ${netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
-              <p className="text-sm font-bold text-gray-800 uppercase tracking-wider">{netProfit >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}</p>
-              <p className={`mt-2 text-2xl font-black ${netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatRupiah(netProfit)}</p>
+            <div className={`p-6 rounded-tile border-2 ${netProfit >= 0 ? 'bg-mint-soft/60 border-mint/40' : 'bg-raspberry-soft/60 border-raspberry/30'}`}>
+              <p className="text-sm font-bold text-on-surface uppercase tracking-wider">{netProfit >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}</p>
+              <p className={`mt-2 text-2xl font-extrabold ${netProfit >= 0 ? 'text-mint-ink' : 'text-raspberry-ink'}`}>{formatRupiah(netProfit)}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-10">
-            <CategoryTable title="Pendapatan per Kategori" rows={incomeByCategory} total={totalIncome} tone="text-emerald-700" />
-            <CategoryTable title="Pengeluaran per Kategori" rows={expenseByCategory} total={totalExpense} tone="text-rose-700" />
+            <CategoryTable title="Pendapatan per Kategori" rows={incomeByCategory} total={totalIncome} tone="text-mint-ink" />
+            <CategoryTable title="Pengeluaran per Kategori" rows={expenseByCategory} total={totalExpense} tone="text-raspberry-ink" />
           </div>
 
           <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Rincian Transaksi</h3>
-            <table className="w-full text-sm border border-gray-200">
+            <h3 className="text-lg font-bold text-on-surface mb-2">Rincian Transaksi</h3>
+            <table className="w-full text-sm border border-outline-variant/30">
               <thead className="table-head">
                 <tr>
                   <th className="p-3 text-left">Tanggal</th>
@@ -220,35 +219,35 @@ const ReportGenerator = () => {
               </thead>
               <tbody>
                 {filtered.map((t, i) => (
-                  <tr key={t.id} className={`border-b border-gray-100 ${i % 2 ? 'bg-gray-50' : ''}`}>
+                  <tr key={t.id} className={`border-b border-outline-variant/30 ${i % 2 ? 'bg-surface-container-low' : ''}`}>
                     <td className="p-3 whitespace-nowrap">{formatDate(t.date)}</td>
                     <td className="p-3">{t.description}</td>
-                    <td className="p-3 text-gray-600">{t.category || 'Lainnya'}</td>
-                    <td className="p-3 text-right text-emerald-700">{t.type === 'income' ? formatRupiah(t.amount) : ''}</td>
-                    <td className="p-3 text-right text-rose-700">{t.type === 'expense' ? formatRupiah(t.amount) : ''}</td>
+                    <td className="p-3 text-on-surface-variant">{t.category || 'Lainnya'}</td>
+                    <td className="p-3 text-right text-mint-ink">{t.type === 'income' ? formatRupiah(t.amount) : ''}</td>
+                    <td className="p-3 text-right text-raspberry-ink">{t.type === 'expense' ? formatRupiah(t.amount) : ''}</td>
                   </tr>
                 ))}
                 {!filtered.length && (
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-gray-500">
+                    <td colSpan={5} className="p-6 text-center text-on-surface-variant">
                       Tidak ada transaksi pada periode ini.
                     </td>
                   </tr>
                 )}
               </tbody>
-              <tfoot className="bg-gray-100 font-bold">
+              <tfoot className="bg-surface-container font-bold">
                 <tr>
                   <td colSpan={3} className="p-3 text-right">
                     Total
                   </td>
-                  <td className="p-3 text-right text-emerald-700">{formatRupiah(totalIncome)}</td>
-                  <td className="p-3 text-right text-rose-700">{formatRupiah(totalExpense)}</td>
+                  <td className="p-3 text-right text-mint-ink">{formatRupiah(totalIncome)}</td>
+                  <td className="p-3 text-right text-raspberry-ink">{formatRupiah(totalExpense)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
-          <p className="pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
+          <p className="pt-6 border-t border-outline-variant/30 text-center text-sm text-on-surface-variant">
             SimpananMu — Sistem Pencatatan & Laporan Keuangan
           </p>
         </div>

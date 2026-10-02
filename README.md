@@ -21,6 +21,10 @@ npm run build    # build produksi ke folder dist/
 npm run lint     # pemeriksaan ESLint
 ```
 
+## Desain
+
+Tampilan mengikuti design system **Candy Chic Ledger**: kanvas krem hangat, aksen candy pink / peach / lilac, kartu berbentuk pil dengan bayangan blush, dan font Plus Jakarta Sans. Token desain (warna, tipografi, radius, bayangan) didefinisikan di `tailwind.config.js`, komponen dasar di `src/components/ui.jsx`, dan ikon memakai `lucide-react`. Di ponsel navigasi berupa dock bawah; di desktop berupa menu pil di header.
+
 ## Mengaktifkan AI Buddy
 
 Fitur chat memanggil Google Gemini API lewat fungsi serverless `api/chat.js`, jadi API key tidak pernah terkirim ke browser.

@@ -2,22 +2,22 @@ import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { addTransaction, updateTransaction } from '../store/transactionSlice.js'
 import { CATEGORIES, todayISO } from '../utils/finance.js'
-import { Button, Field, Input, Modal, Select, Textarea } from './ui.jsx'
+import { Button, Field, Input, Modal, Segmented, Select, Textarea } from './ui.jsx'
 
-const emptyForm = () => ({
-  type: 'expense',
+const emptyForm = (type = 'expense') => ({
+  type,
   date: todayISO(),
   description: '',
-  category: CATEGORIES.expense[0],
+  category: CATEGORIES[type][0],
   amount: '',
   note: '',
 })
 
-const TransactionForm = ({ transaction, onClose }) => {
+const TransactionForm = ({ transaction, defaultType = 'expense', onClose }) => {
   const dispatch = useDispatch()
   const isEdit = Boolean(transaction)
   const [form, setForm] = useState(() =>
-    transaction ? { ...emptyForm(), ...transaction, category: transaction.category || 'Lainnya', amount: String(transaction.amount) } : emptyForm(),
+    transaction ? { ...emptyForm(), ...transaction, category: transaction.category || 'Lainnya', amount: String(transaction.amount) } : emptyForm(defaultType),
   )
   const [errors, setErrors] = useState({})
 
@@ -51,24 +51,14 @@ const TransactionForm = ({ transaction, onClose }) => {
   return (
     <Modal title={isEdit ? '✏️ Ubah Transaksi' : '➕ Tambah Transaksi'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div className="grid grid-cols-2 gap-2 p-1 bg-fuchsia-50 rounded-2xl">
-          {['income', 'expense'].map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setType(type)}
-              className={`py-2.5 rounded-xl font-bold transition-all ${
-                form.type === type
-                  ? type === 'income'
-                    ? 'bg-gradient-to-b from-emerald-400 to-emerald-500 text-white shadow shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]'
-                    : 'glossy-btn'
-                  : 'text-gray-600 hover:bg-white'
-              }`}
-            >
-              {type === 'income' ? '💰 Pendapatan' : '💸 Pengeluaran'}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={form.type}
+          onChange={setType}
+          options={[
+            { value: 'expense', label: '💸 Pengeluaran' },
+            { value: 'income', label: '💰 Pemasukan' },
+          ]}
+        />
 
         <Field label="Deskripsi" error={errors.description}>
           <Input value={form.description} onChange={set('description')} placeholder="mis. Penjualan Produk A" autoFocus />
