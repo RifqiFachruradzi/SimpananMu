@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Bell, CloudOff, FileText, Flower2, HeartHandshake, Loader2, LogOut, PiggyBank, ReceiptText, Target } from 'lucide-react'
+import { AlertTriangle, Bell, CloudOff, FileText, Flower2, HeartHandshake, Hourglass, Loader2, LogOut, Moon, PiggyBank, ReceiptText, Sun, Sunrise, Sunset, Target, User } from 'lucide-react'
+import Logo from './Logo.jsx'
 import { flush } from '../store/sync.js'
 import { useSession } from '../utils/session.js'
 import { setName } from '../store/profileSlice.js'
@@ -20,10 +21,10 @@ const NAV_ITEMS = [
 
 const greeting = () => {
   const h = new Date().getHours()
-  if (h < 11) return 'Selamat Pagi 🌸'
-  if (h < 15) return 'Selamat Siang ☀️'
-  if (h < 18) return 'Selamat Sore 🌷'
-  return 'Selamat Malam 🌙'
+  if (h < 11) return { text: 'Selamat Pagi', icon: Sunrise }
+  if (h < 15) return { text: 'Selamat Siang', icon: Sun }
+  if (h < 18) return { text: 'Selamat Sore', icon: Sunset }
+  return { text: 'Selamat Malam', icon: Moon }
 }
 
 const initials = (name) =>
@@ -32,7 +33,7 @@ const initials = (name) =>
     .filter(Boolean)
     .slice(0, 2)
     .map((w) => w[0].toUpperCase())
-    .join('') || '🌸'
+    .join('')
 
 const ProfileForm = ({ name, onClose }) => {
   const dispatch = useDispatch()
@@ -49,7 +50,7 @@ const ProfileForm = ({ name, onClose }) => {
     try {
       await session.changePassword(pw.old, pw.new)
       setPw({ old: '', new: '' })
-      setPwMsg({ ok: true, text: 'Kata sandi berhasil diganti ✨' })
+      setPwMsg({ ok: true, text: 'Kata sandi berhasil diganti.' })
     } catch (err) {
       setPwMsg({ ok: false, text: err.message })
     }
@@ -158,15 +159,16 @@ const NotificationBell = () => {
             <ul className="space-y-2">
               {alerts.map((a) => (
                 <li key={a.category} className="text-body-sm text-on-surface-variant">
-                  <span className={a.spent > a.limit ? 'text-raspberry-ink font-bold' : 'text-secondary font-bold'}>
-                    {a.spent > a.limit ? '⚠️ Lewat batas' : '⏳ Hampir habis'}
+                  <span className={`inline-flex items-center gap-1 font-bold ${a.spent > a.limit ? 'text-raspberry-ink' : 'text-secondary'}`}>
+                    {a.spent > a.limit ? <AlertTriangle size={14} /> : <Hourglass size={14} />}
+                    {a.spent > a.limit ? 'Lewat batas' : 'Hampir habis'}
                   </span>{' '}
                   {a.category}: {formatRupiah(a.spent)} / {formatRupiah(a.limit)}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-body-sm text-on-surface-variant">Semua anggaran bulan ini aman ✨</p>
+            <p className="text-body-sm text-on-surface-variant">Semua anggaran bulan ini aman.</p>
           )}
           <Link to="/budget" onClick={() => setOpen(false)} className="mt-3 inline-block text-label-md text-primary hover:underline">
             Kelola anggaran →
@@ -179,6 +181,7 @@ const NotificationBell = () => {
 
 export const TopBar = () => {
   const name = useSelector((state) => state.profile?.name || '')
+  const greet = greeting()
   const [editing, setEditing] = useState(false)
 
   return (
@@ -186,13 +189,15 @@ export const TopBar = () => {
       <div className="max-w-content mx-auto flex items-center justify-between gap-4 px-5 md:px-8 py-2.5">
         <button onClick={() => setEditing(true)} className="flex items-center gap-2 text-left group" aria-label="Ubah profil">
           <span className="relative w-11 h-11 shrink-0 rounded-full p-[2px] bg-gradient-to-tr from-primary-container via-tertiary-container to-secondary-container shadow-sm">
-            <span className="w-full h-full rounded-full bg-white flex items-center justify-center text-label-lg text-primary">{initials(name)}</span>
+            <span className="w-full h-full rounded-full bg-white flex items-center justify-center text-label-lg text-primary">{initials(name) || <User size={20} />}</span>
             <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-secondary-container border-2 border-white" />
           </span>
           <span>
-            <span className="block text-label-sm text-on-surface-variant">{greeting()}</span>
+            <span className="flex items-center gap-1 text-label-sm text-on-surface-variant">
+              {greet.text} <greet.icon size={13} className="text-primary-container" />
+            </span>
             <span className="block text-headline-sm font-extrabold tracking-tight text-on-surface group-hover:text-primary transition-colors">
-              Hi, {name || 'Kamu'}! ✨
+              Hi, {name || 'Kamu'}!
             </span>
           </span>
         </button>
@@ -216,7 +221,9 @@ export const TopBar = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <span className="hidden sm:block lg:hidden text-headline-md font-extrabold text-primary tracking-tight">SimpananMu</span>
+          <span className="hidden sm:flex lg:hidden items-center gap-2 text-headline-md font-extrabold text-primary tracking-tight">
+            <Logo size={32} /> SimpananMu
+          </span>
           <SyncBadge />
           <NotificationBell />
         </div>

@@ -8,9 +8,11 @@ import {
   FileBarChart,
   Heart,
   MinusCircle,
+  PiggyBank,
   PlusCircle,
   Rocket,
   Sparkles,
+  Target,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -92,7 +94,7 @@ const GoalCard = ({ goal }) => {
   if (!goal) {
     return (
       <Card className="p-5">
-        <EmptyState icon="🐷" message="Belum ada target tabungan impian.">
+        <EmptyState icon={PiggyBank} message="Belum ada target tabungan impian.">
           <Link to="/goals" className="text-label-lg text-primary hover:underline">
             Buat target pertama →
           </Link>
@@ -129,10 +131,10 @@ const GoalCard = ({ goal }) => {
         <p className="text-label-sm text-on-surface-variant font-medium">
           {remaining ? (
             <>
-              Sisa <strong className="text-primary tnum">{formatRupiah(remaining)}</strong> lagi! ✨
+              Sisa <strong className="text-primary tnum">{formatRupiah(remaining)}</strong> lagi
             </>
           ) : (
-            'Target tercapai! 🎉'
+            'Target tercapai!'
           )}
         </p>
         <Link to="/goals" className="text-label-sm text-primary hover:text-on-primary-container flex items-center">
@@ -150,7 +152,9 @@ const CategoryCard = ({ category, spent, limit }) => {
   return (
     <div className={`bg-white p-4 rounded-card border ${meta.border} shadow-sm hover:shadow-level-2 transition-shadow flex flex-col`}>
       <div className="flex items-start justify-between">
-        <span className={`icon-disc w-12 h-12 text-2xl ${meta.disc}`}>{meta.emoji}</span>
+        <span className={`icon-disc w-12 h-12 ${meta.disc}`}>
+          <meta.Icon size={22} />
+        </span>
         <Pill className={over ? 'bg-raspberry-soft text-raspberry-ink' : meta.pill}>{pct}%</Pill>
       </div>
       <h4 className="mt-3 text-label-md font-bold text-on-surface">{category}</h4>
@@ -206,7 +210,7 @@ const Dashboard = () => {
 
           <section>
             <SectionTitle
-              title="Aksi Cepat ✨"
+              title="Aksi Cepat"
               action={
                 <Link to="/transactions" className="text-label-sm text-primary hover:underline">
                   Semua
@@ -243,7 +247,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <Card>
-                <EmptyState icon="🎯" message="Belum ada anggaran kategori.">
+                <EmptyState icon={Target} message="Belum ada anggaran kategori.">
                   <Link to="/budget" className="text-label-lg text-primary hover:underline">
                     Atur anggaran →
                   </Link>

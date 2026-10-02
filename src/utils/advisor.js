@@ -65,26 +65,26 @@ export const localAdvice = (question, ctx) => {
   const wantsCashflow = has(q, 'arus', 'cash', 'analisis', 'tren', 'bulan lalu')
 
   if (wantsGoals) {
-    lines.push('### 🐷 Rencana target tabungan')
+    lines.push('### Rencana target tabungan')
     if (!targetTabungan.length) lines.push('Kamu belum punya target tabungan. Buat dulu di halaman **Tabungan** ya.')
     targetTabungan.forEach((g) => {
       const sisa = Math.max(0, g.target - g.terkumpul)
-      if (!sisa) return lines.push(`- **${g.nama}**: sudah tercapai 🎉`)
+      if (!sisa) return lines.push(`- **${g.nama}**: sudah tercapai`)
       const perBulan = g.sisaBulan > 0 ? `±${formatRupiah(Math.ceil(sisa / g.sisaBulan))}/bulan selama ${g.sisaBulan} bulan` : 'belum ada tenggat; coba tetapkan tenggat agar bisa dihitung per bulan'
       lines.push(`- **${g.nama}**: kurang ${formatRupiah(sisa)} → ${perBulan}`)
     })
     const surplus = avgIncome - avgExpense
     if (surplus > 0) lines.push(`\nRata-rata surplus 3 bulan terakhir ${formatRupiah(surplus)}/bulan. Sisihkan di awal bulan (pay yourself first) sebelum belanja.`)
   } else if (wantsBudget) {
-    lines.push('### 🎯 Usulan anggaran (pola 50/30/20)')
+    lines.push('### Usulan anggaran (pola 50/30/20)')
     lines.push(`Berdasarkan rata-rata pendapatan ${formatRupiah(avgIncome)}/bulan:`)
     lines.push(`- **Kebutuhan (50%)**: ${formatRupiah(avgIncome * 0.5)}`)
     lines.push(`- **Keinginan (30%)**: ${formatRupiah(avgIncome * 0.3)}`)
     lines.push(`- **Tabungan (20%)**: ${formatRupiah(avgIncome * 0.2)}`)
     const over = anggaranBulanan.filter((b) => b.terpakai > b.batas)
-    if (over.length) lines.push(`\n⚠️ Melebihi anggaran bulan ini: ${over.map((b) => `**${b.kategori}** (${formatRupiah(b.terpakai)} / ${formatRupiah(b.batas)})`).join(', ')}.`)
+    if (over.length) lines.push(`\nMelebihi anggaran bulan ini: ${over.map((b) => `**${b.kategori}** (${formatRupiah(b.terpakai)} / ${formatRupiah(b.batas)})`).join(', ')}.`)
   } else if (wantsCashflow) {
-    lines.push('### 📊 Arus kas 3 bulan terakhir')
+    lines.push('### Arus kas 3 bulan terakhir')
     arusKas3Bulan.forEach((m) => lines.push(`- **${m.bulan}**: masuk ${formatRupiah(m.pendapatan)}, keluar ${formatRupiah(m.pengeluaran)}, selisih ${formatRupiah(m.selisih)}`))
     const [first, last] = [arusKas3Bulan[0], arusKas3Bulan[arusKas3Bulan.length - 1]]
     if (first && last && first.pengeluaran > 0) {
@@ -92,7 +92,7 @@ export const localAdvice = (question, ctx) => {
       lines.push(`\nPengeluaran ${change >= 0 ? 'naik' : 'turun'} ${Math.abs(change).toFixed(0)}% dibanding ${first.bulan}.`)
     }
   } else {
-    lines.push('### 💡 Rencana hemat bulan ini')
+    lines.push('### Rencana hemat bulan ini')
     lines.push(`Bulan ini: pendapatan ${formatRupiah(bulanIni.totalIncome)}, pengeluaran ${formatRupiah(bulanIni.totalExpense)}, selisih ${formatRupiah(bulanIni.netProfit)}.`)
     if (topExpenses.length) {
       lines.push('\n**Kategori terbesar (rata-rata/bulan) dan target pengurangan 10–15%:**')

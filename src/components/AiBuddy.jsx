@@ -24,7 +24,7 @@ const WELCOME = {
   id: 'welcome',
   role: 'assistant',
   content:
-    'Hai! Aku **Buddy** 💖, asisten keuanganmu. Aku bisa membaca data transaksi, anggaran, dan target tabunganmu untuk membantu:\n- menyusun **rencana hemat** pengeluaran\n- mengatur **anggaran** per kategori\n- menghitung **target tabungan** per bulan\n\nMau mulai dari mana?',
+    'Hai! Aku **Buddy**, asisten keuanganmu. Aku bisa membaca data transaksi, anggaran, dan target tabunganmu untuk membantu:\n- menyusun **rencana hemat** pengeluaran\n- mengatur **anggaran** per kategori\n- menghitung **target tabungan** per bulan\n\nMau mulai dari mana?',
 }
 
 const loadHistory = (key) => {
@@ -128,7 +128,7 @@ const AiBuddy = () => {
         setOffline(true)
         updateMessage(replyId, { content: localAdvice(content, context), pending: false, offline: true })
       } else {
-        updateMessage(replyId, { content: `⚠️ ${err.message}`, pending: false, error: true })
+        updateMessage(replyId, { content: err.message, pending: false, error: true })
       }
     } finally {
       setBusy(false)

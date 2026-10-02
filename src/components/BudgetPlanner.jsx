@@ -27,7 +27,9 @@ const BudgetCard = ({ category, limit, spent }) => {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
-          <span className={`icon-disc w-12 h-12 text-2xl ${meta.disc}`}>{meta.emoji}</span>
+          <span className={`icon-disc w-12 h-12 ${meta.disc}`}>
+            <meta.Icon size={22} />
+          </span>
           <div className="min-w-0">
             <h3 className="text-label-lg text-on-surface truncate">{category}</h3>
             <p className={`text-body-sm font-semibold tnum ${over ? 'text-raspberry-ink' : meta.text}`}>
@@ -43,7 +45,7 @@ const BudgetCard = ({ category, limit, spent }) => {
         <>
           <ProgressBar value={spent} max={limit} danger={over} color={meta.bar} />
           <p className={`text-label-sm ${over ? 'text-raspberry-ink' : 'text-on-surface-variant'}`}>
-            {over ? `Lewat ${formatRupiah(spent - limit)} ⚠️` : `Sisa ${formatRupiah(limit - spent)}`}
+            {over ? `Lewat ${formatRupiah(spent - limit)}` : `Sisa ${formatRupiah(limit - spent)}`}
           </p>
         </>
       ) : (
@@ -107,7 +109,7 @@ const BudgetPlanner = () => {
               <Target size={14} /> {formatMonth(month)}
             </span>
             <Pill className={overCount ? 'bg-raspberry-soft text-raspberry-ink' : 'bg-mint-soft text-mint-ink'}>
-              {overCount ? `${overCount} kategori lewat batas` : 'Semua aman ✨'}
+              {overCount ? `${overCount} kategori lewat batas` : 'Semua aman'}
             </Pill>
           </div>
           <p className="mt-4 text-label-md text-on-surface-variant">Terpakai dari anggaran</p>
