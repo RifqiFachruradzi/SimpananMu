@@ -122,7 +122,7 @@ const ReportGenerator = () => {
               <button
                 key={label}
                 onClick={() => setFilters((f) => ({ ...f, ...range() }))}
-                className="px-4 py-1.5 rounded-full text-sm font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                className="chip !py-1.5"
               >
                 {label}
               </button>
@@ -170,7 +170,7 @@ const ReportGenerator = () => {
       {/* Report preview — also what gets captured into the PDF / printed */}
       <div className="overflow-x-auto rounded-3xl shadow-2xl print:shadow-none print:overflow-visible">
         <div ref={reportRef} className="bg-white min-w-[720px] p-10 space-y-10 print:p-0">
-          <div className="flex items-start justify-between border-b-4 border-indigo-600 pb-6">
+          <div className="flex items-start justify-between border-b-4 border-fuchsia-500 pb-6">
             <div>
               <h2 className="text-3xl font-black text-gray-900 tracking-tight">LAPORAN KEUANGAN</h2>
               <p className="text-lg text-gray-600 mt-1">Periode: {periodLabel}</p>
@@ -181,7 +181,7 @@ const ReportGenerator = () => {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-black text-indigo-700">💰 SimpananMu</p>
+              <p className="text-2xl font-black text-fuchsia-600">💰 SimpananMu</p>
               <p className="text-sm text-gray-500">Dicetak {new Date().toLocaleString('id-ID')}</p>
             </div>
           </div>
@@ -209,7 +209,7 @@ const ReportGenerator = () => {
           <div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">Rincian Transaksi</h3>
             <table className="w-full text-sm border border-gray-200">
-              <thead className="bg-slate-800 text-white">
+              <thead className="table-head">
                 <tr>
                   <th className="p-3 text-left">Tanggal</th>
                   <th className="p-3 text-left">Deskripsi</th>

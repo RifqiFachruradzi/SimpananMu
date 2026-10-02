@@ -51,7 +51,7 @@ const TransactionForm = ({ transaction, onClose }) => {
   return (
     <Modal title={isEdit ? '✏️ Ubah Transaksi' : '➕ Tambah Transaksi'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-2xl">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-fuchsia-50 rounded-2xl">
           {['income', 'expense'].map((type) => (
             <button
               key={type}
@@ -60,8 +60,8 @@ const TransactionForm = ({ transaction, onClose }) => {
               className={`py-2.5 rounded-xl font-bold transition-all ${
                 form.type === type
                   ? type === 'income'
-                    ? 'bg-emerald-500 text-white shadow'
-                    : 'bg-rose-500 text-white shadow'
+                    ? 'bg-gradient-to-b from-emerald-400 to-emerald-500 text-white shadow shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]'
+                    : 'glossy-btn'
                   : 'text-gray-600 hover:bg-white'
               }`}
             >

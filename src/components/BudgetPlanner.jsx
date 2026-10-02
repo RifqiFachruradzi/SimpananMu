@@ -64,7 +64,7 @@ const BudgetPlanner = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Anggaran</p>
-          <p className="mt-1 text-2xl font-black text-indigo-600">{formatRupiah(totalLimit)}</p>
+          <p className="mt-1 text-2xl font-black text-fuchsia-600">{formatRupiah(totalLimit)}</p>
         </Card>
         <Card className="p-6">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Terpakai ({formatMonth(month)})</p>

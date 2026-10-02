@@ -96,7 +96,7 @@ const TransactionList = () => {
       />
 
       {message && (
-        <div className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-900">
+        <div className="flex items-start justify-between gap-4 p-4 rounded-2xl glass-strong text-fuchsia-900">
           <span>{message}</span>
           <button onClick={() => setMessage('')} aria-label="Tutup pesan">
             ✕
@@ -140,7 +140,7 @@ const TransactionList = () => {
           </div>
           <div className="flex items-center gap-2">
             {isFiltered && (
-              <button className="text-indigo-600 font-semibold hover:underline" onClick={() => setFilters(emptyFilters)}>
+              <button className="text-fuchsia-600 font-semibold hover:underline" onClick={() => setFilters(emptyFilters)}>
                 Reset filter
               </button>
             )}
@@ -158,7 +158,7 @@ const TransactionList = () => {
         {visible.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gradient-to-r from-slate-800 to-slate-900 text-white text-sm uppercase tracking-wider">
+              <thead className="table-head text-sm uppercase tracking-wider">
                 <tr>
                   <th className="p-4">Tanggal</th>
                   <th className="p-4">Deskripsi</th>
@@ -170,7 +170,7 @@ const TransactionList = () => {
               </thead>
               <tbody>
                 {visible.map((t, index) => (
-                  <tr key={t.id} className={`border-b border-gray-100 last:border-none hover:bg-indigo-50/60 ${index % 2 === 0 ? 'bg-gray-50/50' : ''}`}>
+                  <tr key={t.id} className={`border-b border-fuchsia-50 last:border-none hover:bg-fuchsia-50/70 ${index % 2 === 0 ? 'bg-white/40' : ''}`}>
                     <td className="p-4 whitespace-nowrap font-semibold text-gray-700">{formatDate(t.date)}</td>
                     <td className="p-4">
                       <p className="font-semibold text-gray-900">{t.description}</p>
@@ -185,7 +185,7 @@ const TransactionList = () => {
                       <TypeBadge type={t.type} />
                     </td>
                     <td className="p-4 text-right whitespace-nowrap">
-                      <button onClick={() => setEditing(t)} className="p-2 rounded-xl hover:bg-indigo-100" aria-label={`Ubah ${t.description}`}>
+                      <button onClick={() => setEditing(t)} className="p-2 rounded-xl hover:bg-fuchsia-100" aria-label={`Ubah ${t.description}`}>
                         ✏️
                       </button>
                       <button onClick={() => handleDelete(t)} className="p-2 rounded-xl hover:bg-rose-100" aria-label={`Hapus ${t.description}`}>

@@ -72,7 +72,7 @@ const ContributeForm = ({ goal, onClose }) => {
   return (
     <Modal title={`💵 ${goal.name}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-2xl">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-fuchsia-50 rounded-2xl">
           {[
             ['deposit', '➕ Setor'],
             ['withdraw', '➖ Tarik'],
@@ -81,7 +81,7 @@ const ContributeForm = ({ goal, onClose }) => {
               key={value}
               type="button"
               onClick={() => setMode(value)}
-              className={`py-2.5 rounded-xl font-bold transition-all ${mode === value ? 'bg-indigo-600 text-white shadow' : 'text-gray-600 hover:bg-white'}`}
+              className={`py-2.5 rounded-xl font-bold transition-all ${mode === value ? 'glossy-btn' : 'text-gray-600 hover:bg-white'}`}
             >
               {label}
             </button>
@@ -134,7 +134,7 @@ const GoalCard = ({ goal, onEdit, onContribute }) => {
             </p>
           )}
         </div>
-        <span className={`text-2xl font-black ${done ? 'text-emerald-600' : 'text-indigo-600'}`}>{pct}%</span>
+        <span className={`text-2xl font-black ${done ? 'text-emerald-600' : 'text-fuchsia-600'}`}>{pct}%</span>
       </div>
       <ProgressBar value={goal.saved} max={goal.target} />
       <div className="text-sm text-gray-600 space-y-1">

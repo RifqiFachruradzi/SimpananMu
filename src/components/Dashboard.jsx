@@ -81,7 +81,7 @@ const Dashboard = () => {
           title="Saldo Keseluruhan"
           value={formatRupiah(stats.overall.netProfit)}
           icon="🏦"
-          tone={stats.overall.netProfit >= 0 ? 'indigo' : 'rose'}
+          tone={stats.overall.netProfit >= 0 ? 'fuchsia' : 'rose'}
           hint={`${transactions.length} transaksi tercatat`}
         />
       </div>
@@ -92,13 +92,13 @@ const Dashboard = () => {
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f5d0fe" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={formatCompact} tick={{ fontSize: 12 }} width={56} />
                 <Tooltip formatter={(v) => formatRupiah(v)} />
                 <Legend />
-                <Bar dataKey="income" name="Pendapatan" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="expense" name="Pengeluaran" fill="#f43f5e" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="income" name="Pendapatan" fill="#a855f7" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="expense" name="Pengeluaran" fill="#f472b6" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -130,7 +130,7 @@ const Dashboard = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">🎯 Anggaran Bulan Ini</h2>
-            <Link to="/budget" className="text-sm font-semibold text-indigo-600 hover:underline">
+            <Link to="/budget" className="text-sm font-semibold text-fuchsia-600 hover:underline">
               Kelola →
             </Link>
           </div>
@@ -156,7 +156,7 @@ const Dashboard = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">🐷 Target Tabungan</h2>
-            <Link to="/goals" className="text-sm font-semibold text-indigo-600 hover:underline">
+            <Link to="/goals" className="text-sm font-semibold text-fuchsia-600 hover:underline">
               Kelola →
             </Link>
           </div>
@@ -185,7 +185,7 @@ const Dashboard = () => {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">📋 Transaksi Terbaru</h2>
-          <Link to="/transactions" className="text-sm font-semibold text-indigo-600 hover:underline">
+          <Link to="/transactions" className="text-sm font-semibold text-fuchsia-600 hover:underline">
             Lihat semua →
           </Link>
         </div>

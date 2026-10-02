@@ -13,7 +13,7 @@ export const CATEGORIES = {
   ],
 }
 
-export const CHART_COLORS = ['#6366f1', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#64748b']
+export const CHART_COLORS = ['#d946ef', '#ec4899', '#9333ea', '#f472b6', '#a855f7', '#fb7185', '#c084fc', '#f9a8d4', '#7c3aed']
 
 export const TYPE_LABEL = { income: 'Pendapatan', expense: 'Pengeluaran' }
 
