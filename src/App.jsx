@@ -1,20 +1,44 @@
-import { Routes, Route } from 'react-router-dom'
-import Header from './components/Header'
-import Dashboard from './components/Dashboard'
-import TransactionList from './components/TransactionList'
-import ReportGenerator from './components/ReportGenerator'
+import { lazy, Suspense } from 'react'
+import { Link, Route, Routes } from 'react-router-dom'
+import { BottomNav, TopBar } from './components/Header'
+
+const Dashboard = lazy(() => import('./components/Dashboard'))
+const TransactionList = lazy(() => import('./components/TransactionList'))
+const BudgetPlanner = lazy(() => import('./components/BudgetPlanner'))
+const SavingsGoals = lazy(() => import('./components/SavingsGoals'))
+const ReportGenerator = lazy(() => import('./components/ReportGenerator'))
+const AiBuddy = lazy(() => import('./components/AiBuddy'))
+
+const Loading = () => <div className="py-24 text-center text-on-surface-variant animate-pulse">Memuat…</div>
+
+const NotFound = () => (
+  <div className="py-24 text-center space-y-4">
+    <p className="text-6xl">🧭</p>
+    <h1 className="text-headline-lg text-on-surface">Halaman tidak ditemukan</h1>
+    <Link to="/" className="inline-block text-label-lg text-primary hover:underline">
+      Kembali ke Home
+    </Link>
+  </div>
+)
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <Header />
-      <main className="pt-20">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/transactions" element={<TransactionList />} />
-          <Route path="/report" element={<ReportGenerator />} />
-        </Routes>
+    <div className="min-h-screen print:bg-white">
+      <TopBar />
+      <main className="pb-32 lg:pb-12">
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/transactions" element={<TransactionList />} />
+            <Route path="/budget" element={<BudgetPlanner />} />
+            <Route path="/goals" element={<SavingsGoals />} />
+            <Route path="/report" element={<ReportGenerator />} />
+            <Route path="/assistant" element={<AiBuddy />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </main>
+      <BottomNav />
     </div>
   )
 }
