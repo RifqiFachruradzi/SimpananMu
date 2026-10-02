@@ -1,16 +1,41 @@
-# React + Vite
+# 💰 SimpananMu
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplikasi web pencatatan keuangan pribadi / usaha kecil, dibangun dengan React 19, Redux Toolkit, Tailwind CSS, Recharts, dan Vite.
 
-Currently, two official plugins are available:
+## Fitur
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Dashboard**: ringkasan pendapatan, pengeluaran, selisih, dan rasio tabungan bulan ini; saldo keseluruhan; grafik arus kas 6 bulan; grafik pengeluaran per kategori; progres anggaran dan target tabungan; transaksi terbaru.
+- **Transaksi**: tambah, ubah, dan hapus transaksi dengan kategori dan catatan; pencarian, filter (jenis, kategori, rentang tanggal), pengurutan, paginasi; ekspor dan impor CSV.
+- **Anggaran**: batas pengeluaran bulanan per kategori, dengan peringatan bila terlampaui; bisa melihat bulan-bulan sebelumnya.
+- **Target Tabungan**: buat target, catat setoran/penarikan, dan lihat estimasi tabungan per bulan sampai tenggat.
+- **Laporan**: laporan laba/rugi dengan preset periode, filter jenis dan kategori, rincian per kategori, unduh PDF, atau cetak langsung.
+- **Penyimpanan lokal**: semua data tersimpan otomatis di `localStorage` browser.
 
-## React Compiler
+## Menjalankan
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev      # server pengembangan
+npm run build    # build produksi ke folder dist/
+npm run lint     # pemeriksaan ESLint
+```
 
-## Expanding the ESLint configuration
+## Format CSV
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Impor menerima file dengan header berikut (sama seperti hasil ekspor):
+
+```
+tanggal,deskripsi,kategori,jenis,nominal,catatan
+2026-10-01,Penjualan Produk A,Penjualan,income,2500000,
+```
+
+`jenis` bernilai `income` (pendapatan) atau `expense` (pengeluaran); `tanggal` berformat `YYYY-MM-DD`.
+
+## Struktur
+
+```
+src/
+  components/   Halaman (Dashboard, TransactionList, BudgetPlanner, SavingsGoals, ReportGenerator) dan komponen UI
+  store/        Redux slice: transaksi, anggaran & target tabungan, serta persistensi localStorage
+  utils/        Fungsi format Rupiah/tanggal, filter, ringkasan, dan CSV
+```

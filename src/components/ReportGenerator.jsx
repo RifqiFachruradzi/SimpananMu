@@ -1,215 +1,256 @@
-import { useState, useEffect, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import { selectTransactions } from '../store/transactionSlice.js'
+import { CATEGORIES, filterTransactions, formatDate, formatRupiah, groupByCategory, summarize, toISODate, todayISO } from '../utils/finance.js'
+import { Button, Card, Field, Input, PageHeader, Select } from './ui.jsx'
+
+const ALL_CATEGORIES = [...new Set([...CATEGORIES.income, ...CATEGORIES.expense])]
+const emptyFilters = { startDate: '', endDate: '', type: 'all', category: 'all' }
+
+const firstOfMonth = () => `${todayISO().slice(0, 7)}-01`
+
+const PRESETS = [
+  { label: 'Bulan ini', range: () => ({ startDate: firstOfMonth(), endDate: todayISO() }) },
+  {
+    label: 'Bulan lalu',
+    range: () => {
+      const now = new Date()
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const end = new Date(now.getFullYear(), now.getMonth(), 0)
+      return { startDate: toISODate(start), endDate: toISODate(end) }
+    },
+  },
+  { label: 'Tahun ini', range: () => ({ startDate: `${todayISO().slice(0, 4)}-01-01`, endDate: todayISO() }) },
+  { label: 'Semua', range: () => ({ startDate: '', endDate: '' }) },
+]
+
+const CategoryTable = ({ title, rows, total, tone }) => (
+  <div>
+    <h3 className={`text-lg font-bold mb-2 ${tone}`}>{title}</h3>
+    {rows.length ? (
+      <table className="w-full text-sm">
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.name} className="border-b border-gray-100">
+              <td className="py-2 text-gray-800">{r.name}</td>
+              <td className="py-2 text-right text-gray-500">{total ? Math.round((r.value / total) * 100) : 0}%</td>
+              <td className="py-2 text-right font-semibold text-gray-900">{formatRupiah(r.value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <p className="text-sm text-gray-500">Tidak ada data.</p>
+    )}
+  </div>
+)
 
 const ReportGenerator = () => {
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', type: 'all' })
-  const transactions = useSelector(state => state.transactions.transactions)
-  const reportRef = useRef()
+  const [filters, setFilters] = useState(emptyFilters)
+  const [generating, setGenerating] = useState(false)
+  const transactions = useSelector(selectTransactions)
+  const reportRef = useRef(null)
 
-  const filteredTransactions = transactions.filter(t => {
-    const date = new Date(t.date)
-    const start = filters.startDate ? new Date(filters.startDate) : null
-    const end = filters.endDate ? new Date(filters.endDate) : null
-    
-    if (start && date < start) return false
-    if (end && date > end) return false
-    if (filters.type !== 'all' && t.type !== filters.type) return false
-    return true
-  })
+  const filtered = useMemo(
+    () => filterTransactions(transactions, filters).sort((a, b) => a.date.localeCompare(b.date)),
+    [transactions, filters],
+  )
+  const { totalIncome, totalExpense, netProfit } = summarize(filtered)
+  const incomeByCategory = groupByCategory(filtered, 'income')
+  const expenseByCategory = groupByCategory(filtered, 'expense')
 
-  const totalIncome = filteredTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0)
-    
-  const totalExpense = filteredTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0)
-  
-  const netProfit = totalIncome - totalExpense
+  const set = (field) => (e) => {
+    const value = e.target.value
+    setFilters((f) => ({ ...f, [field]: value, ...(field === 'type' ? { category: 'all' } : {}) }))
+  }
+
+  const periodStart = filters.startDate || filtered[0]?.date
+  const periodEnd = filters.endDate || filtered[filtered.length - 1]?.date
+  const periodLabel = periodStart || periodEnd ? `${formatDate(periodStart, { day: 'numeric', month: 'long', year: 'numeric' })} – ${formatDate(periodEnd, { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Semua periode'
 
   const generatePDF = async () => {
-    const element = reportRef.current
-    const canvas = await html2canvas(element, { 
-      scale: 3,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width: element.scrollWidth
-    })
-    
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = pdf.internal.pageSize.getHeight()
-    const imgWidth = pdfWidth
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-    let heightLeft = imgHeight
-    let position = 0
+    setGenerating(true)
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')])
+      const element = reportRef.current
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 1024,
+      })
 
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pdfHeight
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
 
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight)
       heightLeft -= pdfHeight
+      while (heightLeft > 0) {
+        position -= pdfHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight)
+        heightLeft -= pdfHeight
+      }
+
+      pdf.save(`Laporan_SimpananMu_${todayISO()}.pdf`)
+    } catch (err) {
+      console.error(err)
+      window.alert('Gagal membuat PDF. Silakan coba lagi.')
+    } finally {
+      setGenerating(false)
     }
-    
-    pdf.save(`Laporan_FineReport_${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 space-y-12">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 text-white p-16 rounded-4xl shadow-2xl text-center">
-        <h1 className="text-6xl font-black mb-6">📄 Generator Laporan PDF</h1>
-        <p className="text-2xl opacity-95 max-w-4xl mx-auto leading-relaxed">
-          Buat laporan keuangan profesional dengan filter tanggal dan jenis transaksi, siap dicetak PDF
-        </p>
+    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="print:hidden space-y-6">
+        <PageHeader
+          icon="📄"
+          title="Laporan Keuangan"
+          subtitle="Buat laporan laba/rugi dengan filter periode, jenis, dan kategori. Unduh sebagai PDF atau cetak langsung."
+        />
+
+        <Card className="p-6 space-y-5">
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map(({ label, range }) => (
+              <button
+                key={label}
+                onClick={() => setFilters((f) => ({ ...f, ...range() }))}
+                className="px-4 py-1.5 rounded-full text-sm font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="📅 Tanggal mulai">
+              <Input type="date" value={filters.startDate} onChange={set('startDate')} />
+            </Field>
+            <Field label="📅 Tanggal selesai">
+              <Input type="date" value={filters.endDate} onChange={set('endDate')} />
+            </Field>
+            <Field label="🔍 Jenis">
+              <Select value={filters.type} onChange={set('type')}>
+                <option value="all">Semua transaksi</option>
+                <option value="income">Hanya pendapatan</option>
+                <option value="expense">Hanya pengeluaran</option>
+              </Select>
+            </Field>
+            <Field label="🏷️ Kategori">
+              <Select value={filters.category} onChange={set('category')}>
+                <option value="all">Semua kategori</option>
+                {(filters.type === 'all' ? ALL_CATEGORIES : CATEGORIES[filters.type]).map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-100">
+            <Button variant="success" onClick={generatePDF} disabled={generating || !filtered.length}>
+              {generating ? '⏳ Membuat PDF…' : '⬇️ Download PDF'}
+            </Button>
+            <Button variant="secondary" onClick={() => window.print()} disabled={!filtered.length}>
+              🖨️ Cetak
+            </Button>
+            <Button variant="secondary" onClick={() => setFilters(emptyFilters)}>
+              🔄 Reset filter
+            </Button>
+          </div>
+        </Card>
       </div>
 
-      {/* Filter Panel */}
-      <div className="bg-white/80 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/60">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-end">
-          <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-4">📅 Tanggal Mulai</label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => setFilters({...filters, startDate: e.target.value})}
-              className="w-full p-5 text-lg border-2 border-gray-200 rounded-3xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-400 transition-all shadow-lg hover:shadow-xl"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-4">📅 Tanggal Selesai</label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-              className="w-full p-5 text-lg border-2 border-gray-200 rounded-3xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-400 transition-all shadow-lg hover:shadow-xl"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-4">🔍 Filter Jenis</label>
-            <select
-              value={filters.type}
-              onChange={(e) => setFilters({...filters, type: e.target.value})}
-              className="w-full p-5 text-lg border-2 border-gray-200 rounded-3xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-400 transition-all shadow-lg hover:shadow-xl appearance-none bg-gradient-to-r from-white to-gray-50"
-            >
-              <option value="all">Semua Transaksi</option>
-              <option value="income">💰 Hanya Pendapatan</option>
-              <option value="expense">💸 Hanya Pengeluaran</option>
-            </select>
-          </div>
-        </div>
-        
-        <div className="flex flex-col lg:flex-row gap-6 mt-12 pt-12 border-t-2 border-gray-100">
-          <button
-            onClick={generatePDF}
-            className="flex-1 lg:flex-none bg-gradient-to-r from-emerald-500 via-emerald-600 to-green-600 hover:from-emerald-600 hover:via-emerald-700 hover:to-green-700 text-white py-8 px-12 rounded-3xl text-2xl font-black shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-300 flex items-center justify-center space-x-4 text-center"
-          >
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>Download PDF Laporan</span>
-          </button>
-          
-          <button
-            onClick={() => setFilters({ startDate: '', endDate: '', type: 'all' })}
-            className="px-12 py-8 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-800 rounded-3xl text-xl font-bold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-2 border-gray-300"
-          >
-            🔄 Reset Semua Filter
-          </button>
-        </div>
-      </div>
-
-      {/* Report Preview */}
-      <div ref={reportRef} className="print-only">
-        <div className="bg-white shadow-2xl rounded-4xl border-8 border-gray-100 p-20 print:p-24 print:shadow-none print:border-none">
-          <div className="text-center mb-24 print:mb-32">
-            <div className="bg-gradient-to-r from-indigo-700 to-purple-700 inline-block px-20 py-10 rounded-4xl mb-8 shadow-2xl print:shadow-none">
-              <h2 className="text-6xl font-black text-white tracking-tight">LAPORAN KEUANGAN</h2>
-              <p className="text-2xl font-semibold mt-4 opacity-95">FineReport Professional</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-3xl text-gray-800 font-bold">
-                Periode: {filters.startDate || '01 Februari 2026'} - {filters.endDate || '09 Februari 2026'}
-              </p>
-              <p className="text-2xl text-gray-600">Total {filteredTransactions.length} transaksi tercatat</p>
-            </div>
-          </div>
-
-          {/* Summary Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-24 print:mb-32">
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-12 rounded-4xl border-4 border-emerald-200 text-center shadow-xl hover:shadow-2xl transition-all">
-              <h3 className="text-3xl font-bold text-emerald-800 mb-6 uppercase tracking-wider">Total Pendapatan</h3>
-              <p className="text-6xl lg:text-7xl font-black text-emerald-600">Rp {totalIncome.toLocaleString('id-ID')}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-rose-50 to-rose-100 p-12 rounded-4xl border-4 border-rose-200 text-center shadow-xl hover:shadow-2xl transition-all">
-              <h3 className="text-3xl font-bold text-rose-800 mb-6 uppercase tracking-wider">Total Pengeluaran</h3>
-              <p className="text-6xl lg:text-7xl font-black text-rose-600">Rp {totalExpense.toLocaleString('id-ID')}</p>
-            </div>
-            
-            <div className={`p-12 rounded-4xl border-4 text-center shadow-xl hover:shadow-2xl transition-all ${
-              netProfit >= 0 
-                ? 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200' 
-                : 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200'
-            }`}>
-              <h3 className="text-3xl font-bold text-gray-800 mb-6 uppercase tracking-wider">Keuntungan Bersih</h3>
-              <p className={`text-6xl lg:text-7xl font-black ${
-                netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
-              }`}>
-                Rp {netProfit.toLocaleString('id-ID')}
+      {/* Report preview — also what gets captured into the PDF / printed */}
+      <div className="overflow-x-auto rounded-3xl shadow-2xl print:shadow-none print:overflow-visible">
+        <div ref={reportRef} className="bg-white min-w-[720px] p-10 space-y-10 print:p-0">
+          <div className="flex items-start justify-between border-b-4 border-indigo-600 pb-6">
+            <div>
+              <h2 className="text-3xl font-black text-gray-900 tracking-tight">LAPORAN KEUANGAN</h2>
+              <p className="text-lg text-gray-600 mt-1">Periode: {periodLabel}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {filters.type !== 'all' && `Jenis: ${filters.type === 'income' ? 'Pendapatan' : 'Pengeluaran'} · `}
+                {filters.category !== 'all' && `Kategori: ${filters.category} · `}
+                {filtered.length} transaksi
               </p>
             </div>
+            <div className="text-right">
+              <p className="text-2xl font-black text-indigo-700">💰 SimpananMu</p>
+              <p className="text-sm text-gray-500">Dicetak {new Date().toLocaleString('id-ID')}</p>
+            </div>
           </div>
 
-          {/* Detailed Table */}
-          <div className="overflow-hidden rounded-3xl border-4 border-gray-200 shadow-2xl">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+          <div className="grid grid-cols-3 gap-6">
+            <div className="p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-200">
+              <p className="text-sm font-bold text-emerald-800 uppercase tracking-wider">Total Pendapatan</p>
+              <p className="mt-2 text-2xl font-black text-emerald-600">{formatRupiah(totalIncome)}</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-rose-50 border-2 border-rose-200">
+              <p className="text-sm font-bold text-rose-800 uppercase tracking-wider">Total Pengeluaran</p>
+              <p className="mt-2 text-2xl font-black text-rose-600">{formatRupiah(totalExpense)}</p>
+            </div>
+            <div className={`p-6 rounded-2xl border-2 ${netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+              <p className="text-sm font-bold text-gray-800 uppercase tracking-wider">{netProfit >= 0 ? 'Laba Bersih' : 'Rugi Bersih'}</p>
+              <p className={`mt-2 text-2xl font-black ${netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatRupiah(netProfit)}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-10">
+            <CategoryTable title="Pendapatan per Kategori" rows={incomeByCategory} total={totalIncome} tone="text-emerald-700" />
+            <CategoryTable title="Pengeluaran per Kategori" rows={expenseByCategory} total={totalExpense} tone="text-rose-700" />
+          </div>
+
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Rincian Transaksi</h3>
+            <table className="w-full text-sm border border-gray-200">
+              <thead className="bg-slate-800 text-white">
                 <tr>
-                  <th className="p-8 text-left font-black text-2xl rounded-tl-3xl">Tanggal</th>
-                  <th className="p-8 text-left font-black text-2xl">Deskripsi Transaksi</th>
-                  <th className="p-8 text-right font-black text-2xl rounded-tr-3xl">Nominal</th>
-                  <th className="p-8 text-left font-black text-2xl">Jenis</th>
+                  <th className="p-3 text-left">Tanggal</th>
+                  <th className="p-3 text-left">Deskripsi</th>
+                  <th className="p-3 text-left">Kategori</th>
+                  <th className="p-3 text-right">Pendapatan</th>
+                  <th className="p-3 text-right">Pengeluaran</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((transaction, index) => (
-                  <tr key={transaction.id} className={`transition-all hover:bg-gray-50/50 border-b-4 border-gray-100 last:border-none ${index % 2 === 0 ? 'bg-gradient-to-r from-gray-50/30 to-transparent' : ''}`}>
-                    <td className="p-8 font-black text-2xl text-gray-900">{new Date(transaction.date).toLocaleDateString('id-ID')}</td>
-                    <td className="p-8 text-2xl font-bold text-gray-900 max-w-2xl">{transaction.description}</td>
-                    <td className="p-8 text-right font-black text-4xl text-gray-900">
-                      Rp {transaction.amount.toLocaleString('id-ID')}
-                    </td>
-                    <td className="p-8">
-                      <span className={`px-8 py-4 rounded-2xl text-xl font-black shadow-2xl text-white ${
-                        transaction.type === 'income'
-                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
-                          : 'bg-gradient-to-r from-rose-500 to-rose-600'
-                      }`}>
-                        {transaction.type === 'income' ? 'PENDAPATAN' : 'PENGELUARAN'}
-                      </span>
-                    </td>
+                {filtered.map((t, i) => (
+                  <tr key={t.id} className={`border-b border-gray-100 ${i % 2 ? 'bg-gray-50' : ''}`}>
+                    <td className="p-3 whitespace-nowrap">{formatDate(t.date)}</td>
+                    <td className="p-3">{t.description}</td>
+                    <td className="p-3 text-gray-600">{t.category || 'Lainnya'}</td>
+                    <td className="p-3 text-right text-emerald-700">{t.type === 'income' ? formatRupiah(t.amount) : ''}</td>
+                    <td className="p-3 text-right text-rose-700">{t.type === 'expense' ? formatRupiah(t.amount) : ''}</td>
                   </tr>
                 ))}
+                {!filtered.length && (
+                  <tr>
+                    <td colSpan={5} className="p-6 text-center text-gray-500">
+                      Tidak ada transaksi pada periode ini.
+                    </td>
+                  </tr>
+                )}
               </tbody>
+              <tfoot className="bg-gray-100 font-bold">
+                <tr>
+                  <td colSpan={3} className="p-3 text-right">
+                    Total
+                  </td>
+                  <td className="p-3 text-right text-emerald-700">{formatRupiah(totalIncome)}</td>
+                  <td className="p-3 text-right text-rose-700">{formatRupiah(totalExpense)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
-          
-          <div className="mt-24 pt-20 border-t-8 border-gray-300 text-center text-2xl text-gray-600 print:pt-32">
-            <p>Dicetak pada: <span className="font-bold text-gray-900">{new Date().toLocaleString('id-ID')}</span></p>
-            <p className="mt-8 text-3xl font-bold text-indigo-800 tracking-wide">
-              FineReport Clone - Sistem Laporan Keuangan Profesional
-            </p>
-          </div>
+
+          <p className="pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
+            SimpananMu — Sistem Pencatatan & Laporan Keuangan
+          </p>
         </div>
       </div>
     </div>

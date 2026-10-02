@@ -1,99 +1,223 @@
-import { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { calculateProfitLoss } from '../store/transactionSlice.js'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import { selectTransactions } from '../store/transactionSlice.js'
+import {
+  CHART_COLORS,
+  formatCompact,
+  formatDate,
+  formatRupiah,
+  groupByCategory,
+  monthKey,
+  monthlySeries,
+  summarize,
+  todayISO,
+} from '../utils/finance.js'
+import TransactionForm from './TransactionForm.jsx'
+import { Button, Card, EmptyState, PageHeader, ProgressBar, StatCard, TypeBadge } from './ui.jsx'
+
 
 const Dashboard = () => {
-  const dispatch = useDispatch()
-  const { transactions, profitLoss } = useSelector(state => state.transactions)
+  const transactions = useSelector(selectTransactions)
+  const { budgets, goals } = useSelector((state) => state.planning)
+  const [showForm, setShowForm] = useState(false)
 
-  useEffect(() => {
-    dispatch(calculateProfitLoss())
-  }, [transactions, dispatch])
+  const currentMonth = monthKey(todayISO())
+
+  const stats = useMemo(() => {
+    const thisMonth = transactions.filter((t) => monthKey(t.date) === currentMonth)
+    const monthly = summarize(thisMonth)
+    const overall = summarize(transactions)
+    const expenseByCategory = groupByCategory(thisMonth, 'expense')
+    const savingsRate = monthly.totalIncome > 0 ? (monthly.netProfit / monthly.totalIncome) * 100 : 0
+    const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id))).slice(0, 6)
+    return { monthly, overall, expenseByCategory, savingsRate, recent, series: monthlySeries(transactions, 6) }
+  }, [transactions, currentMonth])
+
+  const budgetRows = useMemo(() => {
+    const spent = Object.fromEntries(stats.expenseByCategory.map((c) => [c.name, c.value]))
+    return Object.entries(budgets)
+      .map(([category, limit]) => ({ category, limit, spent: spent[category] || 0 }))
+      .sort((a, b) => b.spent / b.limit - a.spent / a.limit)
+  }, [budgets, stats.expenseByCategory])
+
+  const totalGoal = goals.reduce((s, g) => s + g.target, 0)
+  const totalSaved = goals.reduce((s, g) => s + Math.min(g.saved, g.target), 0)
+  const monthName = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
 
   return (
-    <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 space-y-16">
-      <div className="text-center">
-        <h1 className="text-6xl lg:text-7xl font-black bg-gradient-to-r from-gray-900 via-indigo-900 to-purple-900 bg-clip-text text-transparent mb-6">
-          Dashboard Keuangan
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          Monitor alur transaksi secara real-time, analisis profit/loss otomatis, dan generate laporan profesional
-        </p>
-      </div>
-      
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {[
-          { title: 'Total Pendapatan', value: profitLoss.totalIncome, color: 'emerald', icon: '📈' },
-          { title: 'Total Pengeluaran', value: profitLoss.totalExpense, color: 'rose', icon: '📉' },
-          { 
-            title: 'Keuntungan Bersih', 
-            value: profitLoss.netProfit, 
-            color: profitLoss.netProfit >= 0 ? 'emerald' : 'rose',
-            icon: profitLoss.netProfit >= 0 ? '🚀' : '⚠️'
-          }
-        ].map(({ title, value, color, icon }, index) => (
-          <div 
-            key={title}
-            className={`group bg-white/70 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/50 hover:shadow-3xl hover:-translate-y-3 transition-all duration-500 hover:bg-white relative overflow-hidden ${
-              index === 2 ? `border-${color}-200` : ''
-            }`}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity from-white to-transparent" />
-            <div className="flex items-start space-x-6">
-              <div className={`p-5 bg-gradient-to-br from-${color}-400 to-${color}-600 rounded-3xl shadow-xl group-hover:scale-110 transition-all duration-300 text-2xl`}>
-                {icon}
-              </div>
-              <div className="flex-1 pt-2">
-                <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">{title}</p>
-                <p className={`text-4xl lg:text-5xl font-black text-${color}-600`}>
-                  Rp {value.toLocaleString('id-ID')}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
+    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+      <PageHeader
+        icon="📊"
+        title="Dashboard Keuangan"
+        subtitle={`Ringkasan keuangan bulan ${monthName}: arus kas, anggaran, dan target tabungan.`}
+        actions={<Button onClick={() => setShowForm(true)}>➕ Tambah Transaksi</Button>}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+        <StatCard title="Pendapatan Bulan Ini" value={formatRupiah(stats.monthly.totalIncome)} icon="📈" tone="emerald" />
+        <StatCard title="Pengeluaran Bulan Ini" value={formatRupiah(stats.monthly.totalExpense)} icon="📉" tone="rose" />
+        <StatCard
+          title="Selisih Bulan Ini"
+          value={formatRupiah(stats.monthly.netProfit)}
+          icon={stats.monthly.netProfit >= 0 ? '🚀' : '⚠️'}
+          tone={stats.monthly.netProfit >= 0 ? 'emerald' : 'rose'}
+          hint={stats.monthly.totalIncome > 0 ? `Rasio tabungan ${stats.savingsRate.toFixed(0)}%` : undefined}
+        />
+        <StatCard
+          title="Saldo Keseluruhan"
+          value={formatRupiah(stats.overall.netProfit)}
+          icon="🏦"
+          tone={stats.overall.netProfit >= 0 ? 'indigo' : 'rose'}
+          hint={`${transactions.length} transaksi tercatat`}
+        />
       </div>
 
-      {/* Recent Transactions */}
-      <div className="bg-white/60 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-10">
-        <h2 className="text-4xl font-bold text-gray-900 mb-10 flex items-center space-x-3">
-          <span>📋</span>
-          <span>Transaksi Terbaru</span>
-        </h2>
-        <div className="overflow-x-auto rounded-2xl border border-gray-200">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-              <tr>
-                <th className="p-6 text-left font-bold rounded-tl-2xl">Tanggal</th>
-                <th className="p-6 text-left font-bold">Deskripsi</th>
-                <th className="p-6 text-right font-bold rounded-tr-2xl">Jumlah</th>
-                <th className="p-6 text-left font-bold">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.slice(-6).map((t) => (
-                <tr key={t.id} className="hover:bg-indigo-50/50 transition-all border-b border-gray-100 last:border-b-0">
-                  <td className="p-6 font-bold text-lg">{new Date(t.date).toLocaleDateString('id-ID')}</td>
-                  <td className="p-6 text-xl font-semibold text-gray-900">{t.description}</td>
-                  <td className="p-6 text-right font-black text-3xl">
-                    Rp {t.amount.toLocaleString('id-ID')}
-                  </td>
-                  <td className="p-6">
-                    <span className={`px-6 py-3 rounded-full text-lg font-bold shadow-lg ${
-                      t.type === 'income'
-                        ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 text-white'
-                        : 'bg-gradient-to-r from-rose-400 to-rose-500 text-white'
-                    }`}>
-                      {t.type === 'income' ? 'PENDAPATAN' : 'PENGELUARAN'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="p-6 lg:col-span-2">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Arus Kas 6 Bulan Terakhir</h2>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                <YAxis tickFormatter={formatCompact} tick={{ fontSize: 12 }} width={56} />
+                <Tooltip formatter={(v) => formatRupiah(v)} />
+                <Legend />
+                <Bar dataKey="income" name="Pendapatan" fill="#10b981" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="expense" name="Pengeluaran" fill="#f43f5e" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Pengeluaran per Kategori</h2>
+          {stats.expenseByCategory.length ? (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={stats.expenseByCategory} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="80%" paddingAngle={2}>
+                    {stats.expenseByCategory.map((entry, i) => (
+                      <Cell key={entry.name} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => formatRupiah(v)} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState icon="🥧" message="Belum ada pengeluaran bulan ini." />
+          )}
+        </Card>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">🎯 Anggaran Bulan Ini</h2>
+            <Link to="/budget" className="text-sm font-semibold text-indigo-600 hover:underline">
+              Kelola →
+            </Link>
+          </div>
+          {budgetRows.length ? (
+            <div className="space-y-4">
+              {budgetRows.slice(0, 5).map(({ category, limit, spent }) => (
+                <div key={category}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-semibold text-gray-800">{category}</span>
+                    <span className={spent > limit ? 'text-rose-600 font-bold' : 'text-gray-600'}>
+                      {formatRupiah(spent)} / {formatRupiah(limit)}
+                    </span>
+                  </div>
+                  <ProgressBar value={spent} max={limit} danger={spent > limit} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon="🎯" message="Belum ada anggaran yang diatur." />
+          )}
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">🐷 Target Tabungan</h2>
+            <Link to="/goals" className="text-sm font-semibold text-indigo-600 hover:underline">
+              Kelola →
+            </Link>
+          </div>
+          {goals.length ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Terkumpul <span className="font-bold text-gray-900">{formatRupiah(totalSaved)}</span> dari{' '}
+                <span className="font-bold text-gray-900">{formatRupiah(totalGoal)}</span>
+              </p>
+              {goals.slice(0, 4).map((g) => (
+                <div key={g.id}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-semibold text-gray-800">{g.name}</span>
+                    <span className="text-gray-600">{Math.min(100, Math.round((g.saved / g.target) * 100))}%</span>
+                  </div>
+                  <ProgressBar value={g.saved} max={g.target} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon="🐷" message="Belum ada target tabungan." />
+          )}
+        </Card>
+      </div>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">📋 Transaksi Terbaru</h2>
+          <Link to="/transactions" className="text-sm font-semibold text-indigo-600 hover:underline">
+            Lihat semua →
+          </Link>
+        </div>
+        {stats.recent.length ? (
+          <ul className="divide-y divide-gray-100">
+            {stats.recent.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">{t.description}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatDate(t.date)} · {t.category || 'Lainnya'}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {t.type === 'income' ? '+' : '−'} {formatRupiah(t.amount)}
+                  </p>
+                  <div className="hidden sm:block mt-1">
+                    <TypeBadge type={t.type} />
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState message="Belum ada transaksi.">
+            <Button onClick={() => setShowForm(true)}>➕ Tambah transaksi pertama</Button>
+          </EmptyState>
+        )}
+      </Card>
+
+      {showForm && <TransactionForm onClose={() => setShowForm(false)} />}
     </div>
   )
 }
